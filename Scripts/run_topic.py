@@ -1,15 +1,11 @@
 import boto3
 import os
 from time import gmtime, strftime
-
 from Streaming.Topic import Topic
-# from Streaming.Model import Model
-from Streaming.Streamer import TwitterStream, getTweepyAuth
-# from Streaming.ProcessTweets import run_topic_models, save_classified_tweets # classify_tweets, tweet_text_from_file,
-# from sklearn.feature_extraction.text import CountVectorizer
-# from nltk.stem import SnowballStemmer
+from Streaming.Streamer import TwitterStream
+import sys
 
-def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_count=1000, threshold=0.5):
+def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_count=1000):
     """
     1. Create the topic and stream
     2. Collects tweet_count tweets
@@ -19,6 +15,9 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
     # 1. Create the topic and stream
     run_topic = Topic(topic_id=topic_id)
     run_topic.readTopic()
+    if run_topic.name is None:
+        print("Topic not found")
+        quit()
 
     # Temporary output file
 
@@ -46,3 +45,13 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         # 4. Delete the temporary file
         os.remove(outfile)
 
+
+if __name__ == "__main__":
+    print("in Main")
+    topic_id = int(sys.argv[1])
+    s3_bucket = sys.argv[2]
+    s3_path = sys.argv[3]
+    tweet_count = sys.argv[4]
+    print('Running: Topic id: {}, s3 bucket: {}, s3 path: {}, tweet count: {}'.format(topic_id, s3_bucket, s3_path, tweet_count))
+
+    run_topic_continuous(topic_id, s3_bucket,s3_path,tweet_count)

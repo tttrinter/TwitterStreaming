@@ -1,4 +1,14 @@
-### This is process will take a list of Twitter Ids and update their follower lists
+"""
+Created in December of 2017
+
+This script will take a list of Twitter Ids and update their follower lists.
+It is intended for scheduling or running from the command line
+
+If passed a list of Twitter Ids, it will pull all of the followers for each of those users.
+If NOT passed a list of Twitter Ids, it will get the ids for all Christian leaders and colleges
+
+@author: tom trinter
+"""
 
 
 import sys
@@ -9,8 +19,8 @@ from TwitterFunctions.AQTwitterFunctions import get_followers
 from TwitterRDS.RDSQueries import get_prior_user_list, update_follower_hist, get_leader_indicator_ids
 from TwitterRDS import RDSconfig
 
-# source = 'postgres'
-source = 'sqllite'
+source = 'postgres'
+# source = 'sqllite'
 
 # Set up log
 logging.basicConfig(filename='UpdateFollowers.log',
@@ -20,6 +30,21 @@ logging.basicConfig(filename='UpdateFollowers.log',
 
 
 def update_followers(leader_id_list: list=None, complete_ratio=0.99):
+    """
+    Gathers user ids that follow each "leader" in the leader_id_list and saves to the DB
+    Also saves the date-time that the follower list was updated for that user.
+
+    Args:
+        leader_id_list: list of Twitter users ids whose followers we want to gather
+        complete_ratio: decimal, 0-1 - the results from the Twitter API are expected to come in reverse
+        order with new followers returned first. That, however is not guaranteed by the API. The API only returns
+        5000 followers at a time. The returned followers are compared with the list of known followers for that
+        user. When the ratio of found:known-users is greater than the "complete_ratio", the process will exit.
+
+    Returns:
+        a list of ids. Returns an empty list if there were no ids returned from the API call
+    """
+
     con = RDSconfig.get_connection(source)
     engine = RDSconfig.get_sqlalchemy_engine(source)
 

@@ -1,3 +1,15 @@
+"""
+Created sometime in the Spring of 2016
+
+Contains post-processing functions for parsing and cleaning up Twitter data before saving.
+It also has functions of name matching and state matching. I've commented some of these
+out because of file access errors that I was unable to resolve.
+
+All that is left is "parse_it"
+
+@author: mostly Ben Wood, some additions by Tom Trinter
+"""
+
 import pandas as pd
 import re
 import os
@@ -39,7 +51,7 @@ def parse_it(tweetText):
 # identify the state if possible
 # Upload list of states and abbreviations
 # This file is giving me troubles - cannot find it unless running from this directory! Need to fix!
-state_file = 'USStates.xlsx'
+# state_file = 'USStates.xlsx'
 # states = pd.read_excel(filepath+state_file)
 
 # 1. Look for comma space and two capital letters as the common state identifyer

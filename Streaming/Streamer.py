@@ -1,7 +1,10 @@
-""" This module manages the creation of Twitter streams and the
-resulting output files.
 """
+Created in December of 2017, using a lot of Ben's code from much earlier in the project
 
+This module manages the creation of Twitter streams and the resulting output files.
+
+@author: tom trinter, ben wood (most of it)
+"""
 
 import tweepy
 from .Topic import Topic
@@ -23,8 +26,11 @@ def getTweepyAuth():
     return auth
 
 
-# This is the listener, responsible for receiving data
 class FileOutListener(tweepy.StreamListener):
+    """
+    This is the listener, responsible for receiving data
+    """
+
     def __init__(self, outfile, limit=100, filter=[], exclusions=[]):
         # Note this intentionally does not process each tweet object inline, just dumps to file.
         # Streams of tweets can be detected at several per second
@@ -35,34 +41,42 @@ class FileOutListener(tweepy.StreamListener):
         self.limit = limit
 
     def on_status(self, status):
+        """Defines what happens when a Tweet passes through the filterset."""
+
         # Twitter returns data in JSON format - we need to decode it first
         data = status._json
         decoded = json.loads(data)
         self.result_count += 1
 
+        # Reject non-english tweets since the models are all fit with English text
         if decoded['user']['lang'] != 'en':
             return
 
-        # Only save if there are none of the exclusion terms
+        # Reject if any of the exclusion terms are found
         filter_count = len([x for x in self.filter if x in decoded['text']])
         exclusion_count = len([x for x in self.exclusions if x in decoded['text']])
         if (filter_count > 0 and exclusion_count == 0):
             self.result_count += 1
 
-            try: print('@%s: %s' % (decoded['user']['screen_name'], decoded['text'].encode('ascii', 'ignore')))
-            except: pass
+            # try: print('@%s: %s' % (decoded['user']['screen_name'], decoded['text'].encode('ascii', 'ignore')))
+            # except: pass
 
+            # Write the tweet to the output file
             with open(self._outfile,'a') as tf:
                 tf.write(data.rstrip('\n'))
 
     def on_data(self, data):
+        """Does the same thing as the on_status. Not exactly sure why they are separate events."""
+
         # Twitter returns data in JSON format - we need to decode it first
         # data = status._json
         decoded = json.loads(data)
+
+        # Reject if not english.
         if decoded['user']['lang'] != 'en':
             return
 
-        # Only save if there are none of the exclusion terms
+        # Reject if any of the exclusion terms are found
         filter_count = len([x for x in self.filter if x in decoded['text']])
         exclusion_count = len([x for x in self.exclusions if x in decoded['text']])
         if (filter_count > 0 and exclusion_count == 0):
@@ -75,6 +89,7 @@ class FileOutListener(tweepy.StreamListener):
         #     except:
         #         pass
 
+        # Write the tweet to the output file
             with open(self._outfile, 'a') as tf:
                 tf.write(data.rstrip('\n'))
 
@@ -127,6 +142,18 @@ class TwitterStream(object):
 
 
 def stream_to_S3(topic_id: int, s3bucket: str, s3path: str, tweet_count=1000, save=True):
+    """
+    Starts a Twitter stream running and saves the tweets into files on S3
+
+    Args:
+        topic_id: int, unique identifier for a topic defined in the database
+        s3bucket: str, where the resulting tweet file gets saved
+        s3path: str, directory and file name for where to put the file in S3 (excluding bucket)
+
+    Returns:
+        none
+    """
+
     # Create the topic and stream
     run_topic = Topic(topic_id=topic_id)
     run_topic.readTopic()

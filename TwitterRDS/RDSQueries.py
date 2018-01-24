@@ -1,3 +1,14 @@
+"""
+Created in December 2017
+
+This file contains all of the SQL queries used with RDS - SQLite or Postgres
+
+There is code for SQLite and Postgres databases. Initial development was with SQLite. However, since
+we've moved over to Postgres, SQLite development has stopped, so some of that code may no longer work.
+
+@author: tom trinter
+"""
+
 from datetime import datetime
 from TwitterFunctions.AQTwitterFunctions import get_followers, parse_it
 from . import RDSconfig
@@ -14,6 +25,7 @@ def check_string(instring:str):
         return parse_it(instring)
 
 def fix_none(SQL: str):
+    # Replaces None and Null in SQL statements so they don't error out
     SQL = SQL.replace("None", "NULL")
     SQL = SQL.replace("'NULL'", "NULL")
     return SQL
@@ -21,6 +33,19 @@ def fix_none(SQL: str):
 
 ############ GENERAL ############
 def getidentity(cursor, table, id_col):
+    """ Gets the most recent identity value from the database in the session for a recent insert
+
+    Args:
+        cursor: database cursor - should be part of an open connection
+        table: the table for which you want the latest identity value
+        id_col: what column in the database is the primary key
+
+    Returns:
+        integer - latest id for the table.
+    """
+
+    #TODO: could this be an issue with multiple users or processes? Seems possible, but low risk.
+
     if source =='sqllite':
         get_index = cursor.execute("SELECT last_insert_rowid();")
         return get_index.lastrowid
@@ -34,6 +59,15 @@ def getidentity(cursor, table, id_col):
 
 ############ TWEETS ############
 def check_for_tweet(tweet_id, con=None):
+    """ Checks to see if a tweet has already been loaded to avoid duplicates.
+
+    Args:
+        tweet_id: bigint
+        con: database connection; function will use default connection if none.
+
+    Returns:
+        tweet_id if found, -1 if not found.
+    """
     if con is None:
         con = RDSconfig.get_connection()
 
@@ -52,6 +86,23 @@ def check_for_tweet(tweet_id, con=None):
 def insert_tweet(tweet_id, created_at, text, user_id,
                  favorite_count=None, favorited=None, in_reply_to_status=None,
                  in_reply_to_user_id=None, lang=None, place=None, retweet_count=None, retweeted=None, con=None):
+    """
+    Inserts a Tweet into the database. All params below are directly from Twitter, except for the connection
+    :param tweet_id:
+    :param created_at:
+    :param text:
+    :param user_id:
+    :param favorite_count:
+    :param favorited:
+    :param in_reply_to_status:
+    :param in_reply_to_user_id:
+    :param lang:
+    :param place: Nulling this out for now. Need to decide how to store this in the future.
+    :param retweet_count:
+    :param retweeted:
+    :param con: database connection. Uses default if none.
+    :return: tweet_id after insertion; -1 if failed.
+    """
 
     if con is None:
         con = RDSconfig.get_connection()
@@ -80,6 +131,12 @@ def insert_tweet(tweet_id, created_at, text, user_id,
 
 
 def save_scores(save_scores: pd.DataFrame, con=None):
+    """
+    Saves probabilities from scored tweets and their associated topic models to the tweet_scodes table in the database.
+    :param save_scores: dataframe with the tweet ids and scores
+    :param con: database connection. uses default if None.
+    :return: None
+    """
     if con is None:
         con = RDSconfig.get_connection()
 
@@ -96,6 +153,12 @@ def save_scores(save_scores: pd.DataFrame, con=None):
 
 ############ USERS ############
 def check_for_user(user_id, con=None):
+    """
+    Checks the database for a user_id to avoid duplicates
+    :param user_id: Twitter user id
+    :param con: database connection. Uses default if none.
+    :return: user_id, or -1 if not found.
+    """
     if con is None:
         con = RDSconfig.get_connection()
     SQL = 'SELECT "id" FROM users WHERE "id"={}'.format(user_id)
@@ -115,6 +178,30 @@ def insert_user(id, name, screen_name,
                 description=None, geo_enabled=None, lang=None, statuses_count=None,
                 time_zone=None, created_at=None, verified=None, utc_offset=None,
                 contributors_enabled=None, listed_count=None, protected=None, url=None, con=None):
+    """
+    Inserts a user into the users table in the database. All parameters are directly from Twitter except for con.
+    :param id:
+    :param name:
+    :param screen_name:
+    :param location:
+    :param followers_count:
+    :param friends_count:
+    :param favourites_count:
+    :param description:
+    :param geo_enabled:
+    :param lang:
+    :param statuses_count:
+    :param time_zone:
+    :param created_at:
+    :param verified:
+    :param utc_offset:
+    :param contributors_enabled:
+    :param listed_count:
+    :param protected:
+    :param url:
+    :param con:
+    :return: user_id after successful insert, or -1 if failed.
+    """
 
     if con is None:
         con = RDSconfig.get_connection(source)
@@ -154,6 +241,30 @@ def update_user(id, name, screen_name,
                 description=None, geo_enabled=None, lang=None, statuses_count=None,
                 time_zone=None, created_at=None, verified=None, utc_offset=None,
                 contributors_enabled=None, listed_count=None, protected=None, url=None, con=None):
+    """
+    Updates a user in the database. All parameters are directly from Twitter except for con;
+    :param id:
+    :param name:
+    :param screen_name:
+    :param location:
+    :param followers_count:
+    :param friends_count:
+    :param favourites_count:
+    :param description:
+    :param geo_enabled:
+    :param lang:
+    :param statuses_count:
+    :param time_zone:
+    :param created_at:
+    :param verified:
+    :param utc_offset:
+    :param contributors_enabled:
+    :param listed_count:
+    :param protected:
+    :param url:
+    :param con: database connection; uses default if None.
+    :return: none
+    """
 
     if con is None:
         con = RDSconfig.get_connection()
@@ -178,6 +289,13 @@ def update_user(id, name, screen_name,
 
 
 def update_follower_hist(leaderId, record_count, con=None):
+    """ Inserts a row into the follower_update_hist table with the leader id and datetime followers were updated
+    Args:
+        leaderId: int - twitter id for the account whose followers were updated
+        record_count: number of records added
+        con: database connection; uses default if none
+
+    """
     if con is None:
         con = RDSconfig.get_connection()
 
@@ -190,6 +308,14 @@ def update_follower_hist(leaderId, record_count, con=None):
 
 
 def get_prior_user_list(leader_id, con=None):
+    """Queries the database for all known followers of the leader_id. This is to avoid duplicates.
+
+    Args:
+        leader_id: twitter id for the account of interest
+        con: database connection
+    Returns:
+        list of twitter ids for all known followers of the leader_id
+    """
     if con is None:
         con = RDSconfig.get_connection()
 
@@ -201,9 +327,22 @@ def get_prior_user_list(leader_id, con=None):
 
 ############ TOPICS ############
 def insert_topic(topic_name: str, filters=[], exclusions=[], topic_description: str=None, con=None):
+    """ Inserts a topic into the topics table in the database
+    Args:
+    :param topic_name: Name of the topic or life event
+    :param filters: comma separated list of terms for the Twitter filter
+    :param exclusions: comma separated list of exclusion terms
+    :param topic_description: short description of the topic
+    :param con: database connection
+
+    Returns:
+    topic id for the newly added topic. -1 if failed.
+    """
     if con is None:
         con = RDSconfig.get_connection(source)
     cur = con.cursor()
+
+    # TODO: need to add code to avoid duplicates
 
     SQL = """ INSERT INTO topics (tp_name, tp_filters, tp_exclusions, tp_description, tp_create_dt)
     VALUES ("{}","{}","{}","{}","{}");""".format(
@@ -225,6 +364,12 @@ def insert_topic(topic_name: str, filters=[], exclusions=[], topic_description: 
 
 
 def read_topic(topic_id: int, con=None):
+    """ Reads topic data from the database and returns a dictionary with topic parameters
+
+    :param topic_id: unique identifier for the topic
+    :param con: database connection
+    :return: dictionary with all of the parameters for the topic
+    """
     if con is None:
         con = RDSconfig.get_connection()
     SQL = "SELECT * FROM topics WHERE tp_id={}".format(topic_id)
@@ -246,6 +391,14 @@ def read_topic(topic_id: int, con=None):
 
 
 def read_topic_models(topic_id:int, con=None):
+    """
+    Finds all model data for a given topic and returns a dataframe with the model details
+    Args:
+        :param topic_id: topic unique identifier
+        :param con: database connection
+    Returns:
+        dataframe with model parameters
+    """
     if con is None:
         con = RDSconfig.get_connection()
     SQL = "SELECT * FROM models WHERE md_tp_id={}".format(topic_id)
@@ -277,6 +430,21 @@ def insert_model(name:str,
                  vectorizer:str=None,
                  model_path:str=None,
                  con=None):
+    """
+    Inserts model details into the database
+    Args:
+    :param name: short model name
+    :param topic_id: link to topic unique identifier
+    :param filename: string .sav filename for a pickled python model
+    :param type: text description of model type. Usually "text" for Tweet models
+    :param description: short description of the model
+    :param vectorizer: string .sav filename for the vectorizer used together with the model
+    :param model_path: string - location of the file and vectorizer; should be the location on the EC2 machine; need
+    to override if running locally.
+    :param con: database connection.
+    :return: new model id or, -1 if failed
+    """
+
 
     if con is None:
         con = RDSconfig.get_connection(source)
@@ -298,6 +466,12 @@ def insert_model(name:str,
 
 
 def read_model(model_id:int, con=None):
+    """
+    Reads model details from the database and returns a series with the details for a single model
+    :param model_id: model unique identifier
+    :param con: database connection
+    :return: series with model details.
+    """
     if con is None:
         con = RDSconfig.get_connection()
     SQL = "SELECT * FROM models WHERE md_id={}".format(model_id)
@@ -313,6 +487,13 @@ def read_model(model_id:int, con=None):
 
 
 def get_leader_indicator_ids(con=None):
+    """
+    Gets the full list of leader id's for which we want to track followers. Currently
+    only gets Christian and College leaders. Could be extended to more in the future.
+
+    :param con: database connection
+    :return: list of twitter ids. As currently stands, list is about 2000.
+    """
     if con is None:
         con = RDSconfig.get_connection()
 
@@ -334,6 +515,13 @@ def get_leader_indicator_ids(con=None):
 
 
 def get_dehydrated_followers(minid=0, limit=10000, con=None):
+    """
+    Finds follower_ids from the user_followers table that do not have user records in the users table
+    :param minid: minimum twitter id - used to skip ahead in the list if necessary.
+    :param limit: int, limit of how many followers to pull
+    :param con: database connection
+    :return: list of twitter_ids needing user records
+    """
     if con is None:
         con = RDSconfig.get_connection()
 

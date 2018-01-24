@@ -1,3 +1,13 @@
+"""
+Created sometime in the Fall of 2017
+
+This file contains all of the connections between "Entweeties" objects and the NEO4J graph database
+
+This is not currently used, but may be resurrected if ever we go back to a graph DB.
+
+@author: tom trinter
+"""
+
 from Entweeties import TwitterUser, Tweet
 from TwitterNeo4J import Neo4JQueries
 from datetime import datetime

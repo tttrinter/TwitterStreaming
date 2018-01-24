@@ -1,3 +1,14 @@
+"""
+Created sometime in the Fall of 2017
+
+Neo4J Cypher queries to support the connections between the graph and Entweeties objects.
+
+Not currently used.
+
+@author: tom trinter
+"""
+
+
 from neo4j.v1 import GraphDatabase, basic_auth
 from datetime import datetime
 from TwitterFunctions.AQTwitterFunctions import get_followers

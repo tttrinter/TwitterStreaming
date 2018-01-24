@@ -1,6 +1,17 @@
-# Finds follower records without matching user records
-# Calls Twitter to hydrate those users
-# Saves the hydrated user to the users table
+"""
+Created sometime in the Fall of 2017
+
+1. Finds follower records in the database without matching user records.
+This happens as a result of the update-follower process that finds new followers
+for users of interest.
+
+2. For followers missing user records, this calls Twitter via TwitterFunctions to hydrate those users
+
+3. Saves the hydrated user to the users table
+
+@author: tom trinter
+"""
+
 
 import logging
 from numpy import ceil

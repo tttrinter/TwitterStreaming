@@ -1,4 +1,11 @@
-# coding: utf-8
+# encoding: utf-8
+
+"""
+Created over the course of the project, mostly in the Spring of 2016.
+This has all of the different calls to the Tweepy API to pull and save data from Twitter.
+
+@author: tom trinter
+"""
 
 import tweepy
 import sys

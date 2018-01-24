@@ -1,3 +1,14 @@
+"""
+Created in December of 2017
+
+Class for describing a topic (currently Life Events) model in the TwitterStreaming process. A Topic
+is used to save the filter terms and exclusion terms to use to evaluate Tweets.
+
+Topics are stored in the database in the "topics" table.
+
+@author: tom trinter
+"""
+
 from typing import List, DefaultDict
 from TwitterRDS import RDSQueries as q
 from .Model import Model

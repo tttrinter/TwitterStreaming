@@ -1,3 +1,14 @@
+"""
+Created in December 2017
+
+This file contains all of the connections between "Entweeties" objects and a relational database
+
+There is code for SQLite and Postgres databases. Initial development was with SQLite. However, since
+we've moved over to Postgres, SQLite development has stopped, so some of that code may no longer work.
+
+@author: tom trinter
+"""
+
 from . import RDSQueries as q
 from . import RDSconfig
 from TwitterFunctions import parse_it
@@ -6,8 +17,10 @@ from Entweeties import TwitterUser, Tweet
 def get_user_data(u: TwitterUser):
     """Pulls data FROM RDS for a single user object and updates that user's properties
 
-    :parameter u: an Entweety User object that has at a minimum the twitter_id populated
-    :returns returns a dictionary of user object values
+    Args:
+        u: an Entweety User object that has at a minimum the twitter_id populated
+
+    Returns: a dictionary of user object values
     """
     twitter_id = u.id
     user_data = q.get_single_user(twitter_id)
@@ -23,6 +36,7 @@ def get_user_data(u: TwitterUser):
     return u
 
 def format_sql_value(key, value):
+    """wraps the parse_it function based on data type"""
     attribute_list = TwitterUser.user_attributes
     key_type = attribute_list[key]
     if key_type == "string":
@@ -34,11 +48,14 @@ def format_sql_value(key, value):
 
 def merge_user(user: TwitterUser, con=None):
     """MERGES data TO RDS for a single user object (create if missing, update if existing - based in id)
-    :parameter user: an Entweety User object that has at a minimum the twitter_id populated. This method
+    Args:
+        user: an Entweety User object that has at a minimum the twitter_id populated. This method
     will not get any new data for the user. It will only merge whatever data is passed into the RDS.
-    :parameter con: an RDS connection. This can be used to send data to a different instance of RDS.
+        con: an RDS connection. This can be used to send data to a different instance of RDS.
     Default will send the data into the production RDS instance
-    :returns user_id
+
+    Returns:
+        user_id
     """
 
     if con is None:
@@ -75,20 +92,23 @@ def merge_user(user: TwitterUser, con=None):
 
 def merge_tweet(tweet: Tweet, con=None):
     """MERGES data TO RDS for a tweet (create if missing, update if existing - based in id)
-    :parameter tweet: an Entweety Tweet object that has at a minimum the id, text and user (shell with id minimum)
-        populated. This method will not call the Twitter API - only save data that is present in the Tweet object.
-    :parameter con: an open RDS connection. This can be used to send data to a different instance of RDS.
-    Default will send the data into the production RDS instance
-    :returns None
+    Args:
+        tweet: an Entweety Tweet object that has at a minimum the id, text and user (shell with id minimum)
+                populated. This method will not call the Twitter API - only save data that is present in the
+                Tweet object.
+        con: an open RDS connection. This can be used to send data to a different instance of RDS. Default will
+        send the data into the production RDS instance
+
+    Returns:
+        None
 
     The Tweet object from Twitter has a lot of data besides the Tweet itself in it. This method will do all of the
     following, if the data is present in the Tweet object that is sent in:
 
     1. Load/Merge the User object
     2. Load the Tweet object and create a "TWEET" relationship between the Tweet and the User
-    3. Load/Merge the "in-reply-to" User, if present and create "REPLY" relationship to the in-reply-to user
-    4. Load/Merge any users in the entities['user_mentions'] list and Create "MENTIONS" relationships
-
+    3. Not Implemented: Load/Merge the "in-reply-to" User, if present and create "REPLY" relationship to the in-reply-to user
+    4. Not Implemented: Load/Merge any users in the entities['user_mentions'] list and Create "MENTIONS" relationships
     """
 
     if con is None:
@@ -96,9 +116,6 @@ def merge_tweet(tweet: Tweet, con=None):
 
     # 1. Load/Merge the User Object
     merge_user(tweet.user, con)
-
-    # First line of the Tweet cypher finds this new user
-
 
     #2. Check if the Tweet already exists
     tweet_id = q.check_for_tweet(tweet.id, con=con)
@@ -114,6 +131,4 @@ def merge_tweet(tweet: Tweet, con=None):
         except Exception as e:
             print(e)
             return -1
-
-    #3. Add links to model scores
 

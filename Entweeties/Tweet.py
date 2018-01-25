@@ -1,3 +1,11 @@
+"""
+Created on sometime in the second half of 2017
+
+Tweet object to represent a tweet from Twitter
+
+@author: tom trinter
+"""
+
 from . import TwitterUser
 
 

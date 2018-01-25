@@ -1,5 +1,12 @@
-""" This module contains the methods and functions needed to process a file with one or
-many tweets based on a topic or some other defined process."""
+"""
+Created in December of 2017
+
+This module contains the methods and functions needed to process the tweet files saved to S3
+from the Streamer process. These files should be Topic specific, so they are matched with the
+right filters and models for processing.
+
+@author: tom trinter
+"""
 
 from Entweeties import Tweet, TwitterUser
 from TwitterRDS.RDSEntweeties import merge_tweet
@@ -15,6 +22,16 @@ from nltk.stem import SnowballStemmer
 
 
 def get_processed_key(file_key: str):
+    """ Takes an S3 file key and splits it by "/" for use in building
+        save and delete steps as the files are processed.
+
+        Args:
+            file_key: string, this is the full file name from S3 for a saved file
+
+        Returns:
+            List of terms that make up the S3 path, dropping the bucket name.
+        """
+
     path_pieces = file_key.split('/')
     path_pieces.insert(len(path_pieces) - 1, 'Processed')
     processed_key = ''
@@ -60,14 +77,21 @@ def tweet_text_from_file(infile: str, startline=0, endline=9000000, exclusions =
     return tweet_df
 
 
-def classify_tweets(tweet_df: pd.DataFrame, pickled_model: str, pickled_vectorizer: str,  model_var: str):
+def classify_tweets(tweet_df: pd.DataFrame, pickled_model: str, pickled_vectorizer: str, model_var: str):
     """
+    Processes a dataframe of tweets (resulting from passing an S3 tweet file through tweet_text_from_file)
+    and classifies each tweet with the models passed in. Adds the probability of "success" to the data frame.
+
     Args:
         tweet_df: pandas DataFrame with a 'text' column for classification
         pickled_model: str, path and file name for the pickled model
         pickled_vectorizer: str, path and file name for the feature vectorizer
         model_var: str, this is the column that will be added to the data frame with the resulting model scores
         process_topic: a Topic object that contains definitions for models
+
+    Returns:
+        tweet_df: the incoming data frame is appended with a column named after the model_var that contains the
+        probabilities from the classification model. This is for binary classifiers only at this point.
     """
 
 
@@ -96,6 +120,10 @@ def run_topic_models(infile: str, topic: Topic, startline=0, endline=9000000):
         topic: Topic, this is where the models are defined
         startinle: int, optional - what line to start on in the file
         endline: int, optional - what line to end on in the file
+
+    Returns:
+        tweet_df: dataframe with all of the tweets and the probabilities for each classification model.
+        Each model appends a column to the tweet_df named after the model name.
     """
 
     tweet_df = tweet_text_from_file(infile, exclusions=topic.exclusions)
@@ -126,9 +154,9 @@ def save_classified_tweets(infile: str, tweet_df: pd.DataFrame, topic: Topic, th
     # Reduce the tweet_df to only those tweets that meet or exceed the threshold
     for i in range(0, len(topic.models_list)):
         if i == 0:
-            filter = "(tweet_df['{}']>=threshold)".format(topic.models_list[i].name)
+            filter = "(tweet_df['{}']>={})".format(topic.models_list[i].name, threshold)
         else:
-            filter += " | (tweet_df['{}']>=threshold)".format(topic.models_list[i].name)
+            filter += " | (tweet_df['{}']>={})".format(topic.models_list[i].name, threshold)
 
     scores_df = tweet_df[eval(filter)]
     save_tweets = list(scores_df['tweet_id'])

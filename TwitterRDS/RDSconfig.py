@@ -2,14 +2,14 @@ import psycopg2
 import sqlite3 # for testing only
 
 #postgres
-hostname = 'aqtwitterdb.cymqyntelr81.us-west-2.rds.amazonaws.com'
-username = 'aqtwitter'
-pwd = 'aqtwitterreallylongpassword'
-database = 'aqtwitterdv'
+hostname = 'ditwitter.c6rgtnn1vfuu.us-east-1.rds.amazonaws.com'
+username = 'ditwitter_sa'
+pwd = 'ThriventTwitter'
+database = 'ditwitter'
 from sqlalchemy import create_engine
 
 #sqlite
-def get_connection(source: str = 'sqllite'):
+def get_connection(source: str = 'postgres'):
     if source == 'sqllite':
         con = sqlite3.connect('D:/AQ/Clients/Thrivent/AQTwitter.db')
     elif source == 'postgres':
@@ -19,7 +19,7 @@ def get_connection(source: str = 'sqllite'):
     return con
 
 
-def get_sqlalchemy_engine(source: str = 'sqllite'):
+def get_sqlalchemy_engine(source: str = 'postgres'):
     if source == 'sqllite':
         engine = get_connection('sqllite')
     elif source =='postgres':

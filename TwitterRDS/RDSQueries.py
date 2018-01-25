@@ -5,7 +5,7 @@ import pandas as pd
 from datetime import datetime
 
 # source='sqllite'
-source='postgres'
+source = 'postgres'
 
 def check_string(instring:str):
     if instring is None:

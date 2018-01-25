@@ -54,4 +54,4 @@ if __name__ == "__main__":
     tweet_count = sys.argv[4]
     print('Running: Topic id: {}, s3 bucket: {}, s3 path: {}, tweet count: {}'.format(topic_id, s3_bucket, s3_path, tweet_count))
 
-    run_topic_continuous(topic_id, s3_bucket,s3_path,tweet_count)
+    # run_topic_continuous(topic_id, s3_bucket,s3_path,tweet_count)

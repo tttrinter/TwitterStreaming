@@ -182,11 +182,16 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, threshold=0.5, 
 
     # Check for files
     files = []
+    boto3.setup_default_session(profile_name='di')
     s3 = boto3.resource('s3')
     bucket = s3.Bucket(s3bucket)
-    for o in bucket.objects.filter(Prefix=s3prefix):
-        if o.key[-5:] == '.json':
-            files.append(o.key)
+
+    try:
+        for o in bucket.objects.filter(Prefix=s3prefix):
+            if (o.key[-5:]=='.json' and o.key.find("Processed")==-1):
+                files.append(o.key)
+    except Exception as e:
+        print(e)
 
     # Prepare the vectorizer - this is what extracts the vocabulary terms from the tweets
     # creating the custom, stemmed count vectorizer

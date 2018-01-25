@@ -89,4 +89,5 @@ class StemmedCountVectorizer(CountVectorizer):
 # tweet_df.to_excel("classified_grad_tweets.xlsx")
 # stream_to_S3(topic_id=9,s3bucket='aqtwitter',s3path='tweets/Life Events/Graduation', tweet_count=100000)
 
-process_s3_files(topic_id=9 ,s3bucket='aqtwitter', s3prefix='tweets/Life Events/Graduation', threshold=0.5)
+process_s3_files(topic_id=1 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Graduation/', threshold=0.5)
+process_s3_files(topic_id=2 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Birth/', threshold=0.5)

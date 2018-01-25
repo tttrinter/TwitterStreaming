@@ -216,7 +216,7 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, threshold=0.5, 
 
     try:
         for o in bucket.objects.filter(Prefix=s3prefix):
-            if (o.key[-5:]=='.json' and o.key.find("Processed")==-1):
+            if (o.key[-5:]=='.json' and o.key.find("Processed") == -1):
                 files.append(o.key)
     except Exception as e:
         print(e)

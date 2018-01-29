@@ -48,9 +48,9 @@ class FileOutListener(tweepy.StreamListener):
         exclusion_count = len([x for x in self.exclusions if x in decoded['text']])
         if (filter_count > 0 and exclusion_count == 0):
             self.result_count += 1
-
-            try: print('@%s: %s' % (decoded['user']['screen_name'], decoded['text'].encode('ascii', 'ignore')))
-            except: pass
+            #
+            # try: print('@%s: %s' % (decoded['user']['screen_name'], decoded['text'].encode('ascii', 'ignore')))
+            # except: pass
 
             with open(self._outfile,'a') as tf:
                 tf.write(data.rstrip('\n'))

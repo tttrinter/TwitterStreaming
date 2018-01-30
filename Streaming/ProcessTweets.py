@@ -162,6 +162,8 @@ def save_classified_tweets(infile: str, tweet_df: pd.DataFrame, topic: Topic, th
     save_tweets = list(scores_df['tweet_id'])
 
     with open(infile, encoding='UTF-8') as f:
+        # Store the list of unsaved tweets so they can be excluded from the score upload
+        unsaved_tweets = []
         for line in f:
             tweet_dict = json.loads(line)
             try:
@@ -172,13 +174,14 @@ def save_classified_tweets(infile: str, tweet_df: pd.DataFrame, topic: Topic, th
 
             except Exception as e:
                 # TODO: log failed tweet load
-                print(e)
+                unsaved_tweets.append(tweet_id)
                 pass
 
         # Save the scores
         for model in topic.models_list:
             # The column order is important - they get renamed to match the DB in the RDSQueries
             save_scores = scores_df[['tweet_id', model.name]]
+            save_scores = save_scores[~save_scores.tweet_id.isin(unsaved_tweets)]
             save_scores['model_id'] = model.model_id
             q.save_scores(save_scores=save_scores, con=con)
 
@@ -259,8 +262,5 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, threshold=0.5, 
         except Exception as e:
             print(e)
             pass
-
-        #Clean up objects
-        run_topic = None
 
 

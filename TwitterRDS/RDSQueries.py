@@ -222,7 +222,7 @@ def insert_user(id, name, screen_name,
         check_string(location), followers_count, friends_count, favourites_count,
         check_string(description), int(geo_enabled), lang, statuses_count,
         time_zone, created_at, int(verified), utc_offset,
-        int(contributors_enabled), listed_count, int(protected), url)
+        int(contributors_enabled), listed_count, int(protected), check_string(url))
 
     SQL = fix_none(SQL)
 

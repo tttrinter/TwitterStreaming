@@ -43,9 +43,13 @@ class FileOutListener(tweepy.StreamListener):
         if decoded['user']['lang'] != 'en':
             return
 
-        # Only save if there are none of the exclusion terms
         filter_count = len([x for x in self.filter if x in decoded['text']])
-        exclusion_count = len([x for x in self.exclusions if x in decoded['text']])
+
+        # Only save if there are none of the exclusion terms
+        if len(self.exclusions)>0:
+            exclusion_count = len([x for x in self.exclusions if x in decoded['text']])
+        else:
+            exclusion_count = 0
         if (filter_count > 0 and exclusion_count == 0):
             self.result_count += 1
             #
@@ -69,7 +73,7 @@ class FileOutListener(tweepy.StreamListener):
         try:
             filter_count = len([x for x in self.filter if x in decoded['text']])
         except Exception as e:
-            print(e)
+            # print(e)
             return
         if len(self.exclusions)>0:
             exclusion_count = len([x for x in self.exclusions if x in decoded['text']])

@@ -67,6 +67,9 @@ class Topic(object):
         else:
             return
 
+        # For some reason the model list was lingering from previous topics - clear it out if necessary
+        if len(self.models_list) > 0:
+            self.models_list=[]
         models_df = q.read_topic_models(self.topic_id)
         if len(models_df) > 0 :
             cols = models_df.columns

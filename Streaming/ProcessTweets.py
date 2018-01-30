@@ -260,3 +260,7 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, threshold=0.5, 
             print(e)
             pass
 
+        #Clean up objects
+        run_topic = None
+
+

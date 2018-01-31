@@ -9,6 +9,10 @@ from TwitterFunctions import Twitter_config as config
 from time import sleep, gmtime, strftime
 import json
 import boto3
+import logging
+import os
+
+import sys
 
 
 def getTweepyAuth():
@@ -17,9 +21,12 @@ def getTweepyAuth():
     access_token = config.auth['access_key']
     access_token_secret = config.auth['access_secret']\
 
-    auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-    auth.set_access_token(access_token, access_token_secret)
-
+    try:
+        auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+        auth.set_access_token(access_token, access_token_secret)
+    except Exception as e:
+        logging.exception(e)
+        return
     return auth
 
 
@@ -46,7 +53,7 @@ class FileOutListener(tweepy.StreamListener):
         filter_count = len([x for x in self.filter if x in decoded['text']])
 
         # Only save if there are none of the exclusion terms
-        if len(self.exclusions)>0:
+        if len(self.exclusions) > 0:
             exclusion_count = len([x for x in self.exclusions if x in decoded['text']])
         else:
             exclusion_count = 0
@@ -75,7 +82,7 @@ class FileOutListener(tweepy.StreamListener):
         except Exception as e:
             # print(e)
             return
-        if len(self.exclusions)>0:
+        if len(self.exclusions) > 0:
             exclusion_count = len([x for x in self.exclusions if x in decoded['text']])
         else:
             exclusion_count = 0
@@ -95,10 +102,8 @@ class FileOutListener(tweepy.StreamListener):
         return
 
     def on_error(self, status):
-        print(status)
-        if status == 420:
-            return False
-
+        logging.error(status)
+        pass
 
 class TwitterStream(object):
     """
@@ -121,12 +126,17 @@ class TwitterStream(object):
             filters = self.topic.filters
 
     #override tweepy.StreamListener to add logic to on_status
-        myStreamListener = FileOutListener(outfile=self.outfile,
-                                           filter=self.topic.filters,
-                                           exclusions=self.topic.exclusions,
-                                           limit=tweet_count)
-        myStream = tweepy.Stream(auth=getTweepyAuth(), listener=myStreamListener)
-        myStream.filter(languages=["en"], track=filters, async=async)
+        try:
+            myStreamListener = FileOutListener(outfile=self.outfile,
+                                               filter=self.topic.filters,
+                                               exclusions=self.topic.exclusions,
+                                               limit=tweet_count)
+            myStream = tweepy.Stream(auth=getTweepyAuth(), listener=myStreamListener)
+            myStream.filter(languages=["en"], track=filters, async=async)
+        except Exception as e:
+            logging.exception(e)
+            pass
+
         if run_time is not None:
             sleep(run_time)
             myStream.disconnect()
@@ -140,21 +150,41 @@ class TwitterStream(object):
         return
 
 
-def stream_to_S3(topic_id: int, s3bucket: str, s3path: str, tweet_count=1000, save=True):
-    # Create the topic and stream
+def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_count=1000):
+    """
+    1. Create the topic and stream
+    2. Collects tweet_count tweets and save to a local file
+    3. Save tweet file to S3 when finished
+    4. Delete the local file
+    """
+
+    # 1. Create the topic and stream
     run_topic = Topic(topic_id=topic_id)
     run_topic.readTopic()
-    s3 = boto3.resource('s3')
+    if run_topic.name is None:
+        print("Topic not found")
+        quit()
 
     # 2. Start Twitter stream running
-    # print("Starting {} stream for {} tweets.".format(run_topic.name, tweet_count))
+    print("Starting {} stream for {} tweets.".format(run_topic.name, tweet_count))
+    iteration = 0
+    boto3.setup_default_session(profile_name='di')
+    s3 = boto3.resource('s3')
+    save_bucket = s3_bucket
+
     while True:
+        iteration += 1
         outfile = run_topic.name + "_" + strftime("%Y%m%d%H%M%S", gmtime()) + ".json"
-        print(outfile)
         run_stream = TwitterStream(name=run_topic.name, topic=run_topic, outfile=outfile)
         run_stream.startStream(tweet_count=tweet_count, async=True)
 
-        # Save file to S3
-        if save:
-            key = s3path + "/" + outfile
-            s3.meta.client.upload_file(outfile, s3bucket, key)
+        # 3. Save file to S3
+        print("Saving {} to {}.".format(outfile, s3_path))
+        key = s3_path + outfile
+        try:
+            s3.meta.client.upload_file(outfile, save_bucket, key)
+        except Exception as e:
+            print(e)
+
+        # 4. Delete the temporary file
+        os.remove(outfile)

@@ -16,6 +16,7 @@ import json
 import pandas as pd
 import pickle
 import boto3
+import logging
 
 from sklearn.feature_extraction.text import CountVectorizer
 from nltk.stem import SnowballStemmer
@@ -65,7 +66,8 @@ def tweet_text_from_file(infile: str, startline=0, endline=9000000, exclusions =
                     exclusion_count = len([x for x in exclusions if x in tweet_text])
                     if exclusion_count == 0:
                         tweets.append({tweet_dict[tweet_key] for tweet_key in tweet_keys})
-                except:
+                except Exception as e:
+                    logging.exception(e)
                     break
             if i == endline:
                 break
@@ -108,6 +110,7 @@ def classify_tweets(tweet_df: pd.DataFrame, pickled_model: str, pickled_vectoriz
             predictions = model.predict(data_features)
             tweet_df[model_var] = predictions
         except Exception as e:
+            logging.exception(e)
             pass
     return tweet_df
 
@@ -128,11 +131,17 @@ def run_topic_models(infile: str, topic: Topic, startline=0, endline=9000000):
 
     tweet_df = tweet_text_from_file(infile, exclusions=topic.exclusions)
     for model in topic.models_list:
-        print("Running {}: {} model.".format(topic.name, model.name))
-        tweet_df = classify_tweets(tweet_df=tweet_df,
-                                   pickled_model=model.model_path+model.filename,
-                                   pickled_vectorizer=model.model_path+model.vectorizer,
-                                   model_var=model.name)
+        msg = "Running {}: {} model.".format(topic.name, model.name)
+        logging.info(msg)
+        print(msg)
+        try:
+            tweet_df = classify_tweets(tweet_df=tweet_df,
+                                       pickled_model=model.model_path+model.filename,
+                                       pickled_vectorizer=model.model_path+model.vectorizer,
+                                       model_var=model.name)
+        except Exception as e:
+            logging.exception(e)
+            return
 
     return tweet_df
 
@@ -173,19 +182,24 @@ def save_classified_tweets(infile: str, tweet_df: pd.DataFrame, topic: Topic, th
                     merge_tweet(new_tweet, con=con)
 
             except Exception as e:
-                # TODO: log failed tweet load
+                logging.exception('tweet_id: {} in {} failed to load.'.format(tweet_id, infile))
+                logging.exception('Tweet load error: {}'.format(e))
+                # add the unsaved tweet to the list so the scores can also be excluded from saving
                 unsaved_tweets.append(tweet_id)
                 pass
 
         # Save the scores
         for model in topic.models_list:
             # The column order is important - they get renamed to match the DB in the RDSQueries
-            save_scores = scores_df[['tweet_id', model.name]]
-            save_scores = save_scores[~save_scores.tweet_id.isin(unsaved_tweets)]
-            save_scores['model_id'] = model.model_id
-            q.save_scores(save_scores=save_scores, con=con)
-
-
+            try:
+                save_scores = scores_df[['tweet_id', model.name]]
+                save_scores = save_scores[~save_scores.tweet_id.isin(unsaved_tweets)]
+                save_scores['model_id'] = model.model_id
+                q.save_scores(save_scores=save_scores, con=con)
+            except Exception as e:
+                logging.exception("Failed saving scores: {}.".format(infile))
+                logging.exception("Score save error: {}".format(e))
+                pass
     f.close()
 
 
@@ -222,6 +236,7 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, threshold=0.5, 
             if (o.key[-5:]=='.json' and o.key.find("Processed") == -1):
                 files.append(o.key)
     except Exception as e:
+        logging.exception(e)
         print(e)
 
     # Prepare the vectorizer - this is what extracts the vocabulary terms from the tweets
@@ -260,6 +275,7 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, threshold=0.5, 
                 Key=file_key)
 
         except Exception as e:
+            logging.exception(e)
             print(e)
             pass
 

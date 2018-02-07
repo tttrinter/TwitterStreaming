@@ -135,6 +135,11 @@ class TwitterStream(object):
             myStream.filter(languages=["en"], track=filters, async=async)
         except Exception as e:
             logging.exception(e)
+            # Doobie Break - if we get the Twitter chill-out error, stop trying for 5 minutes
+            if e == '420':
+                sleep(300)
+            # Bail out and save the file - change the tweet_count goal to equal the current value
+            tweet_count = myStreamListener.result_count
             pass
 
         if run_time is not None:

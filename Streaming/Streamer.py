@@ -47,8 +47,16 @@ class FileOutListener(tweepy.StreamListener):
         decoded = json.loads(data)
         self.result_count += 1
 
-        if decoded['user']['lang'] != 'en':
-            return
+        try:
+            decoded = json.loads(data)
+            if 'user' not in decoded:
+                return
+            elif decoded['user']['lang'] != 'en':
+                return
+
+        except Exception as e:
+            logging.exception(e)
+            pass
 
         filter_count = len([x for x in self.filter if x in decoded['text']])
 
@@ -71,8 +79,11 @@ class FileOutListener(tweepy.StreamListener):
         # data = status._json
         try:
             decoded = json.loads(data)
-            if decoded['user']['lang'] != 'en':
+            if 'user' not in decoded:
                 return
+            elif decoded['user']['lang'] != 'en':
+                return
+
         except Exception as e:
             logging.exception(e)
             pass
@@ -156,6 +167,12 @@ class TwitterStream(object):
         return
 
 
+def connect_s3():
+    boto3.setup_default_session(profile_name='di')
+    s3 = boto3.resource('s3')
+    return s3
+
+
 def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_count=1000):
     """
     1. Create the topic and stream
@@ -174,8 +191,6 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
     # 2. Start Twitter stream running
     print("Starting {} stream for {} tweets.".format(run_topic.name, tweet_count))
     iteration = 0
-    boto3.setup_default_session(profile_name='di')
-    s3 = boto3.resource('s3')
     save_bucket = s3_bucket
 
     while True:
@@ -185,6 +200,7 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         run_stream.startStream(tweet_count=tweet_count, async=True)
 
         # 3. Save file to S3
+        s3 = connect_s3()
         print("Saving {} to {}.".format(outfile, s3_path))
         key = s3_path + outfile
         try:

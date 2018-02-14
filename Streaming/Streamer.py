@@ -19,7 +19,7 @@ def getTweepyAuth():
     consumer_key = config.auth['consumer_key']
     consumer_secret = config.auth['consumer_secret']
     access_token = config.auth['access_key']
-    access_token_secret = config.auth['access_secret']\
+    access_token_secret = config.auth['access_secret']
 
     try:
         auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
@@ -41,12 +41,14 @@ class FileOutListener(tweepy.StreamListener):
         self.exclusions = exclusions
         self.limit = limit
 
-    def on_status(self, status):
+
+    def on_data(self, data):
         # Twitter returns data in JSON format - we need to decode it first
+        # data = status._json
         try:
-            data = status._json
             if data is not None:
                 decoded = json.loads(data)
+                tweet_text = decoded['text'].lower()
                 self.result_count += 1
             else:
                 return
@@ -60,11 +62,11 @@ class FileOutListener(tweepy.StreamListener):
             logging.exception(e)
             return
 
-        filter_count = len([x for x in self.filter if x in decoded['text']])
+        filter_count = len([x for x in self.filter if x in tweet_text])
 
         # Only save if there are none of the exclusion terms
         if len(self.exclusions) > 0:
-            exclusion_count = len([x for x in self.exclusions if x in decoded['text']])
+            exclusion_count = len([x for x in self.exclusions if x in tweet_text])
         else:
             exclusion_count = 0
         if (filter_count > 0 and exclusion_count == 0):
@@ -73,47 +75,54 @@ class FileOutListener(tweepy.StreamListener):
             # try: print('@%s: %s' % (decoded['user']['screen_name'], decoded['text'].encode('ascii', 'ignore')))
             # except: pass
 
-            with open(self._outfile,'a') as tf:
-                tf.write(data.rstrip('\n'))
-
-    def on_data(self, data):
-        # Twitter returns data in JSON format - we need to decode it first
-        # data = status._json
-        try:
-            decoded = json.loads(data)
-            if 'user' not in decoded:
-                return
-            elif decoded['user']['lang'] != 'en':
-                return
-
-        except Exception as e:
-            logging.exception(e)
-            pass
-
-        # Only save if there are none of the exclusion terms
-        try:
-            filter_count = len([x for x in self.filter if x in decoded['text']])
-        except Exception as e:
-            # print(e)
-            return
-        if len(self.exclusions) > 0:
-            exclusion_count = len([x for x in self.exclusions if x in decoded['text']])
-        else:
-            exclusion_count = 0
-        if (filter_count > 0 and exclusion_count == 0):
-            self.result_count += 1
-
-        # Also, we convert UTF-8 to ASCII ignoring all bad characters sent by users
-        # print(decoded)
-        #     try:
-        #    print('@%s: %s' % (decoded['user']['screen_name'], decoded['text'].encode('ascii', 'ignore')))
-        #     except:
-        #         pass
-
             with open(self._outfile, 'a') as tf:
                 tf.write(data.rstrip('\n'))
 
         return
+
+
+    def on_status(self, status):
+        # Twitter returns data in JSON format - we need to decode it first
+        try:
+            data = status._json
+            return self.on_data(data)
+        except Exception as e:
+            logging.exception(e)
+            return
+
+        #     if data is not None:
+        #         decoded = json.loads(data)
+        #         tweet_text = decoded['text'].lower()
+        #         self.result_count += 1
+        #     else:
+        #         return
+        #
+        #     if 'user' not in decoded:
+        #         return
+        #     elif decoded['user']['lang'] != 'en':
+        #         return
+        #
+        # except Exception as e:
+        #     logging.exception(e)
+        #     return
+        #
+        # filter_count = len([x for x in self.filter if x in tweet_text])
+        #
+        # # Only save if there are none of the exclusion terms
+        # if len(self.exclusions) > 0:
+        #     exclusion_count = len([x for x in self.exclusions if x in tweet_text])
+        # else:
+        #     exclusion_count = 0
+        # if (filter_count > 0 and exclusion_count == 0):
+        #     self.result_count += 1
+        #     #
+        #     # try: print('@%s: %s' % (decoded['user']['screen_name'], decoded['text'].encode('ascii', 'ignore')))
+        #     # except: pass
+        #
+        #     with open(self._outfile,'a') as tf:
+        #         tf.write(data.rstrip('\n'))
+        #
+        # return
 
     def on_error(self, status):
         logging.error(status)

@@ -43,12 +43,14 @@ class FileOutListener(tweepy.StreamListener):
 
     def on_status(self, status):
         # Twitter returns data in JSON format - we need to decode it first
-        data = status._json
-        decoded = json.loads(data)
-        self.result_count += 1
-
         try:
-            decoded = json.loads(data)
+            data = status._json
+            if data is not None:
+                decoded = json.loads(data)
+                self.result_count += 1
+            else:
+                return
+
             if 'user' not in decoded:
                 return
             elif decoded['user']['lang'] != 'en':
@@ -56,7 +58,7 @@ class FileOutListener(tweepy.StreamListener):
 
         except Exception as e:
             logging.exception(e)
-            pass
+            return
 
         filter_count = len([x for x in self.filter if x in decoded['text']])
 

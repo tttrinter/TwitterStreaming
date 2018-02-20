@@ -18,8 +18,8 @@ class StemmedCountVectorizer(CountVectorizer):
         return lambda doc: ([english_stemmer.stem(w) for w in analyzer(doc)])
 
 logging.info("Processing graduation files.")
-process_s3_files(topic_id=1 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Graduation/', threshold=0.5)
+process_s3_files(topic_id=1 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Graduation/', threshold=0.7)
 
 logging.info("Processing birth files.")
-process_s3_files(topic_id=2 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Birth/', threshold=0.5)
+process_s3_files(topic_id=2 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Birth/', threshold=0.7)
 

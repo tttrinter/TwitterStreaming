@@ -162,8 +162,9 @@ class TwitterStream(object):
                     print(msg)
                     logging.info(msg)
                     myStream.disconnect()
-
-                pass
+                    return
+                else:
+                    pass
             else:
                 myStream.disconnect()
         return

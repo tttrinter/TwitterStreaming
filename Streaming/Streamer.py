@@ -11,6 +11,7 @@ import json
 import boto3
 import logging
 import os
+from datetime import datetime
 
 import sys
 
@@ -40,11 +41,13 @@ class FileOutListener(tweepy.StreamListener):
         self.filter = filter
         self.exclusions = exclusions
         self.limit = limit
+        self.last_update_time = datetime.now()
 
 
     def on_data(self, data):
         # Twitter returns data in JSON format - we need to decode it first
         # data = status._json
+        self.last_update_time = datetime.now()
         try:
             if data is not None:
                 decoded = json.loads(data)
@@ -90,39 +93,6 @@ class FileOutListener(tweepy.StreamListener):
             logging.exception(e)
             return
 
-        #     if data is not None:
-        #         decoded = json.loads(data)
-        #         tweet_text = decoded['text'].lower()
-        #         self.result_count += 1
-        #     else:
-        #         return
-        #
-        #     if 'user' not in decoded:
-        #         return
-        #     elif decoded['user']['lang'] != 'en':
-        #         return
-        #
-        # except Exception as e:
-        #     logging.exception(e)
-        #     return
-        #
-        # filter_count = len([x for x in self.filter if x in tweet_text])
-        #
-        # # Only save if there are none of the exclusion terms
-        # if len(self.exclusions) > 0:
-        #     exclusion_count = len([x for x in self.exclusions if x in tweet_text])
-        # else:
-        #     exclusion_count = 0
-        # if (filter_count > 0 and exclusion_count == 0):
-        #     self.result_count += 1
-        #     #
-        #     # try: print('@%s: %s' % (decoded['user']['screen_name'], decoded['text'].encode('ascii', 'ignore')))
-        #     # except: pass
-        #
-        #     with open(self._outfile,'a') as tf:
-        #         tf.write(data.rstrip('\n'))
-        #
-        # return
 
     def on_error(self, status):
         logging.error(status)
@@ -143,6 +113,11 @@ class TwitterStream(object):
         self.outfile = outfile
 
     def startStream(self, run_time=None, tweet_count=None, async=False):
+
+        # Set up time variables - used to cutoff the stream when run_time is not none
+        # Also used to keep track of time since last update - to cut off dead streams
+        start_time = datetime.now()
+        time_since_udate = 0
         if len(self.topic.filters) < 1:
             raise Exception("Topic missing filter terms.")
         else:
@@ -160,22 +135,39 @@ class TwitterStream(object):
             logging.exception(e)
             # Doobie Break - if we get the Twitter chill-out error, stop trying for 5 minutes
             if e == '420':
+                msg = "doobie break"
+                logging.info(msg)
+                print(msg)
                 sleep(300)
             # Bail out and save the file - change the tweet_count goal to equal the current value
             tweet_count = myStreamListener.result_count
             pass
 
+    # Check Exit Criteria
+        # Run Time
         if run_time is not None:
-            sleep(run_time)
-            myStream.disconnect()
+            cur_run_time = (datetime.now()-start_time).total_seconds()
+            if cur_run_time >= run_time:
+                myStream.disconnect()
+
             return
 
+        # Tweet Count
         if tweet_count is not None:
             while myStreamListener.result_count < tweet_count:
+                # Dead Stream - if stagnant for over 8 minutes, shut down
+                time_since_update = (myStreamListener.last_update_time - start_time).total_seconds()
+                if time_since_update > 8 * 60:
+                    msg = "Killing stream for inactivity"
+                    print(msg)
+                    logging.info(msg)
+                    myStream.disconnect()
+
                 pass
             else:
                 myStream.disconnect()
         return
+
 
 
 def connect_s3():

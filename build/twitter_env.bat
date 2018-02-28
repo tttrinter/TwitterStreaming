@@ -1,6 +1,6 @@
 setx path "%path%;c:\Users\%USERNAME%\Anaconda3\Scripts\"
-conda create -n twitter_env python=3.6 --yes
-activate twitter_env
+conda create -n twitter python=3.6 --yes
+activate twitter
 pip install tweepy
 pip install boto3
 conda install -y pandas

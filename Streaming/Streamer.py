@@ -33,6 +33,15 @@ def getTweepyAuth():
 
 # This is the listener, responsible for receiving data
 class FileOutListener(tweepy.StreamListener):
+    def on_error(self, status_code):
+        if status_code == 420:
+            logging.exception('420 Error')
+            #returning False in on_data disconnects the stream
+            return False
+        else:
+            logging.exception(status_code)
+            return False
+
     def __init__(self, outfile, limit=100, filter=[], exclusions=[]):
         # Note this intentionally does not process each tweet object inline, just dumps to file.
         # Streams of tweets can be detected at several per second
@@ -52,7 +61,6 @@ class FileOutListener(tweepy.StreamListener):
             if data is not None:
                 decoded = json.loads(data)
                 tweet_text = decoded['text'].lower()
-                self.result_count += 1
             else:
                 return
 
@@ -131,6 +139,8 @@ class TwitterStream(object):
                                                limit=tweet_count)
             myStream = tweepy.Stream(auth=getTweepyAuth(), listener=myStreamListener)
             myStream.filter(languages=["en"], track=filters, async=async)
+        except AttributeError:
+            pass
         except Exception as e:
             logging.exception(e)
             # Doobie Break - if we get the Twitter chill-out error, stop trying for 5 minutes
@@ -139,10 +149,10 @@ class TwitterStream(object):
                 logging.info(msg)
                 print(msg)
                 sleep(300)
-            else:
-                # Bail out and save the file - change the tweet_count goal to equal the current value
-                tweet_count = myStreamListener.result_count
-                pass
+
+            # Bail out and save the file - change the tweet_count goal to equal the current value
+            tweet_count = myStreamListener.result_count
+            pass
 
     # Check Exit Criteria
         # Run Time

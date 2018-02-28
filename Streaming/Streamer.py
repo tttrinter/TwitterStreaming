@@ -139,9 +139,10 @@ class TwitterStream(object):
                 logging.info(msg)
                 print(msg)
                 sleep(300)
-            # Bail out and save the file - change the tweet_count goal to equal the current value
-            tweet_count = myStreamListener.result_count
-            pass
+            else:
+                # Bail out and save the file - change the tweet_count goal to equal the current value
+                tweet_count = myStreamListener.result_count
+                pass
 
     # Check Exit Criteria
         # Run Time
@@ -155,16 +156,7 @@ class TwitterStream(object):
         # Tweet Count
         if tweet_count is not None:
             while myStreamListener.result_count < tweet_count:
-                # Dead Stream - if stagnant for over 8 minutes, shut down
-                time_since_update = (myStreamListener.last_update_time - start_time).total_seconds()
-                if time_since_update > 8 * 60:
-                    msg = "Killing stream for inactivity"
-                    print(msg)
-                    logging.info(msg)
-                    myStream.disconnect()
-                    return
-                else:
-                    pass
+                pass
             else:
                 myStream.disconnect()
         return

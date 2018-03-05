@@ -102,10 +102,6 @@ class FileOutListener(tweepy.StreamListener):
             return
 
 
-    def on_error(self, status):
-        logging.error(status)
-        pass
-
 class TwitterStream(object):
     """
     Static class to run a Twitter stream
@@ -141,6 +137,7 @@ class TwitterStream(object):
             myStream.filter(languages=["en"], track=filters, async=async)
         except AttributeError:
             pass
+
         except Exception as e:
             logging.exception(e)
             # Doobie Break - if we get the Twitter chill-out error, stop trying for 5 minutes
@@ -203,7 +200,7 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         iteration += 1
         outfile = run_topic.name + "_" + strftime("%Y%m%d%H%M%S", gmtime()) + ".json"
         run_stream = TwitterStream(name=run_topic.name, topic=run_topic, outfile=outfile)
-        run_stream.startStream(tweet_count=tweet_count, async=True)
+        run_stream.startStream(tweet_count=tweet_count, async=False)
 
         # 3. Save file to S3
         s3 = connect_s3()

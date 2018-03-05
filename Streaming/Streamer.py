@@ -1,9 +1,7 @@
 """ This module manages the creation of Twitter streams and the
 resulting output files.
 """
-
-
-import tweepy
+from tweepy import Stream,StreamListener,OAuthHandler
 from .Topic import Topic
 from TwitterFunctions import Twitter_config as config
 from time import sleep, gmtime, strftime
@@ -16,32 +14,23 @@ from datetime import datetime
 import sys
 
 
-def getTweepyAuth():
-    consumer_key = config.auth['consumer_key']
-    consumer_secret = config.auth['consumer_secret']
-    access_token = config.auth['access_key']
-    access_token_secret = config.auth['access_secret']
-
+def getTweepyAuth(auth_name):
+    with open('Streaming/twitter_user_config.json') as cfg:
+        config = json.load(cfg)
+    auth_configs = config['auth'][auth_name]
+    print(auth_name)
+    print(auth_configs)
     try:
-        auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
-        auth.set_access_token(access_token, access_token_secret)
+        auth = OAuthHandler(auth_configs['consumer_key'], auth_configs['consumer_secret'])
+        auth.set_access_token(auth_configs['access_key'], auth_configs['access_secret'])
+        print('auth:{0}'.format(auth))
     except Exception as e:
+        print('auth exception')
         logging.exception(e)
-        return
     return auth
 
-
 # This is the listener, responsible for receiving data
-class FileOutListener(tweepy.StreamListener):
-    def on_error(self, status_code):
-        if status_code == 420:
-            logging.exception('420 Error')
-            #returning False in on_data disconnects the stream
-            return False
-        else:
-            logging.exception(status_code)
-            return False
-
+class FileOutListener(StreamListener):
     def __init__(self, outfile, limit=100, filter=[], exclusions=[]):
         # Note this intentionally does not process each tweet object inline, just dumps to file.
         # Streams of tweets can be detected at several per second
@@ -52,6 +41,14 @@ class FileOutListener(tweepy.StreamListener):
         self.limit = limit
         self.last_update_time = datetime.now()
 
+    def on_error(self, status_code):
+        if status_code == 420:
+            logging.exception('420 Error')
+            #returning False in on_data disconnects the stream
+            return False
+        else:
+            logging.exception(status_code)
+            return False
 
     def on_data(self, data):
         # Twitter returns data in JSON format - we need to decode it first
@@ -111,10 +108,11 @@ class TwitterStream(object):
         dest: this is the destination for the data - currently only writing to file
         future could change this to select file, database, or other output destination
     """
-    def __init__(self, name: str, topic: Topic, outfile: str):
+    def __init__(self, name: str, topic: Topic, outfile: str, auth_name: str):
         self.name = name
         self.topic = topic
         self.outfile = outfile
+        self.auth_name = auth_name
 
     def startStream(self, run_time=None, tweet_count=None, async=False):
 
@@ -128,16 +126,17 @@ class TwitterStream(object):
             filters = self.topic.filters
 
     #override tweepy.StreamListener to add logic to on_status
+
+        myStreamListener = FileOutListener(outfile=self.outfile,
+                                           filter=self.topic.filters,
+                                           exclusions=self.topic.exclusions,
+                                           limit=tweet_count)
+        auth = getTweepyAuth(auth_name=self.auth_name)
+        myStream = Stream(auth=auth, listener=myStreamListener)
         try:
-            myStreamListener = FileOutListener(outfile=self.outfile,
-                                               filter=self.topic.filters,
-                                               exclusions=self.topic.exclusions,
-                                               limit=tweet_count)
-            myStream = tweepy.Stream(auth=getTweepyAuth(), listener=myStreamListener)
             myStream.filter(languages=["en"], track=filters, async=async)
         except AttributeError:
             pass
-
         except Exception as e:
             logging.exception(e)
             # Doobie Break - if we get the Twitter chill-out error, stop trying for 5 minutes
@@ -168,15 +167,12 @@ class TwitterStream(object):
                 myStream.disconnect()
         return
 
-
-
 def connect_s3():
     boto3.setup_default_session(profile_name='di')
     s3 = boto3.resource('s3')
     return s3
 
-
-def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_count=1000):
+def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_count=1000, auth_name='tom'):
     """
     1. Create the topic and stream
     2. Collects tweet_count tweets and save to a local file
@@ -199,9 +195,9 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
     while True:
         iteration += 1
         outfile = run_topic.name + "_" + strftime("%Y%m%d%H%M%S", gmtime()) + ".json"
-        run_stream = TwitterStream(name=run_topic.name, topic=run_topic, outfile=outfile)
+        run_stream = TwitterStream(name=run_topic.name, topic=run_topic, outfile=outfile, auth_name = auth_name)
         run_stream.startStream(tweet_count=tweet_count, async=True)
-
+        print(iteration)
         # 3. Save file to S3
         s3 = connect_s3()
         print("Saving {} to {}.".format(outfile, s3_path))
@@ -213,3 +209,4 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
 
         # 4. Delete the temporary file
         os.remove(outfile)
+

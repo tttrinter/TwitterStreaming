@@ -33,6 +33,15 @@ def getTweepyAuth():
 
 # This is the listener, responsible for receiving data
 class FileOutListener(tweepy.StreamListener):
+    def on_error(self, status_code):
+        if status_code == 420:
+            logging.exception('420 Error')
+            #returning False in on_data disconnects the stream
+            return False
+        else:
+            logging.exception(status_code)
+            return False
+
     def __init__(self, outfile, limit=100, filter=[], exclusions=[]):
         # Note this intentionally does not process each tweet object inline, just dumps to file.
         # Streams of tweets can be detected at several per second
@@ -52,7 +61,6 @@ class FileOutListener(tweepy.StreamListener):
             if data is not None:
                 decoded = json.loads(data)
                 tweet_text = decoded['text'].lower()
-                self.result_count += 1
             else:
                 return
 
@@ -94,10 +102,6 @@ class FileOutListener(tweepy.StreamListener):
             return
 
 
-    def on_error(self, status):
-        logging.error(status)
-        pass
-
 class TwitterStream(object):
     """
     Static class to run a Twitter stream
@@ -131,6 +135,9 @@ class TwitterStream(object):
                                                limit=tweet_count)
             myStream = tweepy.Stream(auth=getTweepyAuth(), listener=myStreamListener)
             myStream.filter(languages=["en"], track=filters, async=async)
+        except AttributeError:
+            pass
+
         except Exception as e:
             logging.exception(e)
             # Doobie Break - if we get the Twitter chill-out error, stop trying for 5 minutes
@@ -139,6 +146,7 @@ class TwitterStream(object):
                 logging.info(msg)
                 print(msg)
                 sleep(300)
+
             # Bail out and save the file - change the tweet_count goal to equal the current value
             tweet_count = myStreamListener.result_count
             pass
@@ -155,16 +163,7 @@ class TwitterStream(object):
         # Tweet Count
         if tweet_count is not None:
             while myStreamListener.result_count < tweet_count:
-                # Dead Stream - if stagnant for over 8 minutes, shut down
-                time_since_update = (myStreamListener.last_update_time - start_time).total_seconds()
-                if time_since_update > 8 * 60:
-                    msg = "Killing stream for inactivity"
-                    print(msg)
-                    logging.info(msg)
-                    myStream.disconnect()
-                    return
-                else:
-                    pass
+                pass
             else:
                 myStream.disconnect()
         return

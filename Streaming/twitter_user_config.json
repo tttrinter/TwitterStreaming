@@ -1,0 +1,55 @@
+{
+   "auth":{
+      "tom":{
+          "consumer_key": "cKSf8JxU5Use9bIH5xyQOJn6w",
+          "consumer_secret": "hBFkBRbenFBtF5CJv7rmkYUqEM3OUx8VmU2wbuB3fp5PVi3W2X",
+          "access_key": "713437986118090753-XD9TD4FOkiRYPSXAC7USZV6sVrjWY6m",
+          "access_secret": "WkYVkThgrRPZI6gXFHnU635ECjeW4ytyfyRMW0jN0kfs2"
+        },
+	  "john":{
+          "consumer_key": "xks2XTK4gr2PajPio1RBGWsYU",
+          "consumer_secret": "FywGCjph2vx38uBVbVHLkhzesGVY6ZqEywXd3B0sDeSAWVcDNo",
+          "access_key": "33029025-i1Mm907o7BsKnufMIxjVzByKsuDEhOBb0yV3EAa1E",
+          "access_secret": "vWygXqAijIwRQMZmW3b7AgpFXU6Ve0RU30fzsbzpfx9uf"
+          },
+      "ben":{
+	      "consumer_key": "W35xtaMHkaf4TYupIzFHcbgmZ",
+          "consumer_secret": "WCecdpYOHLD8GyjS8B1B1Mzh1lgyjJ5qGd7GbRETa4QQn9BoZY",
+          "access_key": "6213402-1seQ7s8LAWbetyZgbA7k6jgp3qxNqAPGcNq9MmhWxG",
+          "access_secret": "mSAJADmevcCplLkkcU7xlOe14xy3gXcOmTJjla11t97hb"
+         },
+      "ben2":{
+          "consumer_key": "qBYbNt2NGEPWYS4SLZFVs2dfh",
+          "consumer_secret": "TC2tgKpCOpsusOFh02JOqSC1ydW8K37csNWDNtNvW2fXfAWofj",
+          "access_key": "6213402-DhKPY7mgp8hpMCQTSt5PrmVK3n1h8jYFaJ7Vhl2pYd",
+          "access_secret": "p7y0ZHLs9Rpz8fr2BVg2OA0OUpCi5VwlT4IWKqXwFvkrb"
+         },
+      "jake":{
+          "consumer_key": "dNsIhpmmG6cWfmXuQqh8fNBuW",
+          "consumer_secret": "xi9b2uWyZ0xyg2ZFGABFbKueihyu0Xz3dsUqA9JY7xcQRyl1Yd",
+          "access_key": "806602874142658560-3Zvjc4h2dbvjVGOtInbhVBJ2zl454vB",
+          "access_secret": "jm5iamLPAtbP0mhFLGfctUlpfe0XarQ80Nzdj41cgpqSW"
+        },
+      "allison":{
+          "consumer_key": "KOF0haCjSVO5ymSJEXNnDBPBK",
+          "consumer_secret": "lR85OvM1eAqcvjCBmx5XzAclImtFa8BPh86oO4II5xa4R07DKK",
+          "access_key": "846469386068094976-aSOmnQj5vgsy68hbh1sDy1GYO1kqz9G",
+          "access_secret": "FBZBo6JnKS8zczduJxNatYy6xtpSPu4p1aCPGVV38ifk5"
+        }
+	},
+   "awsauth":{
+      "ben":{
+          "access_key": "AKIAJBAHAKYSMU6SKJZA",
+          "access_secret": "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"
+         }
+	},
+    "log_file": "/var/log/twitter/twitter.log",
+    "log_level": "ERROR",
+    "data_dir": "/home/ben1/data/twitter/",
+    "locations_file": "AdWords_API_Location_Criteria_2016-03-29.csv",
+    "statecode_file": "state_codes.csv",
+    "firstname_file": "first_names.txt",
+    "lastname_file": "last_names.txt",
+    "useboto": "True",
+    "AWSdefaultAuthName": "ben"
+}

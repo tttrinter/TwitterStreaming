@@ -10,5 +10,6 @@ logging.basicConfig(filename='birth_stream.log',
 run_topic_continuous(topic_id=2,
                      s3_bucket='di-thrivent',
                      s3_path='twitter/Life Events/Birth/',
-                     tweet_count=1000)
+                     tweet_count=1000,
+                     auth_name = 'allison')
 

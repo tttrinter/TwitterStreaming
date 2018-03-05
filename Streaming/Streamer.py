@@ -200,7 +200,7 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         iteration += 1
         outfile = run_topic.name + "_" + strftime("%Y%m%d%H%M%S", gmtime()) + ".json"
         run_stream = TwitterStream(name=run_topic.name, topic=run_topic, outfile=outfile)
-        run_stream.startStream(tweet_count=tweet_count, async=False)
+        run_stream.startStream(tweet_count=tweet_count, async=True)
 
         # 3. Save file to S3
         s3 = connect_s3()

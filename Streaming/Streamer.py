@@ -19,15 +19,12 @@ def getTweepyAuth(auth_name):
         config = json.load(cfg)
     auth_configs = config['auth'][auth_name]
     print(auth_name)
-    print(auth_configs)
     try:
         auth = OAuthHandler(auth_configs['consumer_key'], auth_configs['consumer_secret'])
         auth.set_access_token(auth_configs['access_key'], auth_configs['access_secret'])
-        print('auth:{0}'.format(auth))
+        return auth
     except Exception as e:
-        print('auth exception')
         logging.exception(e)
-    return auth
 
 # This is the listener, responsible for receiving data
 class FileOutListener(StreamListener):
@@ -135,8 +132,6 @@ class TwitterStream(object):
         myStream = Stream(auth=auth, listener=myStreamListener)
         try:
             myStream.filter(languages=["en"], track=filters, async=async)
-        except AttributeError:
-            pass
         except Exception as e:
             logging.exception(e)
             # Doobie Break - if we get the Twitter chill-out error, stop trying for 5 minutes
@@ -148,7 +143,7 @@ class TwitterStream(object):
 
             # Bail out and save the file - change the tweet_count goal to equal the current value
             tweet_count = myStreamListener.result_count
-            pass
+            raise
 
     # Check Exit Criteria
         # Run Time
@@ -196,7 +191,10 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         iteration += 1
         outfile = run_topic.name + "_" + strftime("%Y%m%d%H%M%S", gmtime()) + ".json"
         run_stream = TwitterStream(name=run_topic.name, topic=run_topic, outfile=outfile, auth_name = auth_name)
-        run_stream.startStream(tweet_count=tweet_count, async=True)
+        try:
+            run_stream.startStream(tweet_count=tweet_count, async=True)
+        except AttributeError:
+            pass
         print(iteration)
         # 3. Save file to S3
         s3 = connect_s3()

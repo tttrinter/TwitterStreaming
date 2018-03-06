@@ -199,7 +199,7 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         )
         print(msg)
         logging.info(msg)
-        
+
         s3 = connect_s3()
         key = s3_path + outfile
         try:

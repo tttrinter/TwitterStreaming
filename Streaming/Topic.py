@@ -61,7 +61,8 @@ class Topic(object):
         if topic_dict is not None:
             for key in topic_dict:
                 if key in ['filters', 'exclusions']:
-                    self.__setattr__(key, [x.strip() for x in topic_dict[key].split(',')])
+                    if topic_dict[key] is not None:
+                        self.__setattr__(key, [x.strip() for x in topic_dict[key].split(',')])
                 else:
                     self.__setattr__(key, topic_dict[key])
         else:
@@ -71,13 +72,16 @@ class Topic(object):
         if len(self.models_list) > 0:
             self.models_list=[]
         models_df = q.read_topic_models(self.topic_id)
-        if len(models_df) > 0 :
+        if models_df is None:
+            return
+        elif len(models_df) > 0:
             cols = models_df.columns
             for index, row in models_df.iterrows():
                 new_model = Model()
                 for col in cols:
                     new_model.__setattr__(col, row[col])
                 self.models_list.append(new_model)
+            return
 
 
 

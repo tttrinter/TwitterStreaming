@@ -5,6 +5,8 @@ pip install tweepy
 pip install boto3
 conda install -y pandas
 pip install psycopg2
+pip install awscli --upgrade --user
+setx path "%path%;c:\Users\%USERNAME%\AppData\Roaming\Python\Python36\Scripts"
 conda install -y numba
 conda install -y scikit-learn
 conda install -y nltk

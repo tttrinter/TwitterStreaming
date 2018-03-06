@@ -9,16 +9,17 @@ import json
 import boto3
 import logging
 import os
+import io
 from datetime import datetime
+from dateutil import relativedelta
 
 import sys
-
 
 def getTweepyAuth(auth_name):
     with open('Streaming/twitter_user_config.json') as cfg:
         config = json.load(cfg)
     auth_configs = config['auth'][auth_name]
-    print(auth_name)
+    logging.info('Using twitter user: {0}'.format(auth_name))
     try:
         auth = OAuthHandler(auth_configs['consumer_key'], auth_configs['consumer_secret'])
         auth.set_access_token(auth_configs['access_key'], auth_configs['access_secret'])
@@ -31,17 +32,20 @@ class FileOutListener(StreamListener):
     def __init__(self, outfile, limit=100, filter=[], exclusions=[]):
         # Note this intentionally does not process each tweet object inline, just dumps to file.
         # Streams of tweets can be detected at several per second
-        self._outfile = outfile
         self.result_count = 0
         self.filter = filter
         self.exclusions = exclusions
         self.limit = limit
-        self.last_update_time = datetime.now()
+        #self.last_update_time = datetime.now()
+        self.outfile = outfile
+        self.fileout = open(outfile, 'a') #io.StringIO()
 
     def on_error(self, status_code):
         if status_code == 420:
-            logging.exception('420 Error')
+            logging.exception('Enhance Your Calm')
             #returning False in on_data disconnects the stream
+        elif status_code == 429:
+            logging.exception('Rate Limited')
             return False
         else:
             logging.exception(status_code)
@@ -50,7 +54,7 @@ class FileOutListener(StreamListener):
     def on_data(self, data):
         # Twitter returns data in JSON format - we need to decode it first
         # data = status._json
-        self.last_update_time = datetime.now()
+        #self.last_update_time = datetime.now()
         try:
             if data is not None:
                 decoded = json.loads(data)
@@ -68,7 +72,6 @@ class FileOutListener(StreamListener):
             return
 
         filter_count = len([x for x in self.filter if x in tweet_text])
-
         # Only save if there are none of the exclusion terms
         if len(self.exclusions) > 0:
             exclusion_count = len([x for x in self.exclusions if x in tweet_text])
@@ -76,15 +79,8 @@ class FileOutListener(StreamListener):
             exclusion_count = 0
         if (filter_count > 0 and exclusion_count == 0):
             self.result_count += 1
-            #
-            # try: print('@%s: %s' % (decoded['user']['screen_name'], decoded['text'].encode('ascii', 'ignore')))
-            # except: pass
-
-            with open(self._outfile, 'a') as tf:
-                tf.write(data.rstrip('\n'))
-
+            self.fileout.write(data.rstrip('\n'))
         return
-
 
     def on_status(self, status):
         # Twitter returns data in JSON format - we need to decode it first
@@ -94,7 +90,6 @@ class FileOutListener(StreamListener):
         except Exception as e:
             logging.exception(e)
             return
-
 
 class TwitterStream(object):
     """
@@ -151,7 +146,6 @@ class TwitterStream(object):
             cur_run_time = (datetime.now()-start_time).total_seconds()
             if cur_run_time >= run_time:
                 myStream.disconnect()
-
             return
 
         # Tweet Count
@@ -174,7 +168,7 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
     3. Save tweet file to S3 when finished
     4. Delete the local file
     """
-
+    start = datetime.now()
     # 1. Create the topic and stream
     run_topic = Topic(topic_id=topic_id)
     run_topic.readTopic()
@@ -183,7 +177,7 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         quit()
 
     # 2. Start Twitter stream running
-    print("Starting {} stream for {} tweets.".format(run_topic.name, tweet_count))
+    print("Starting {0} stream for {1} tweets using auth({2}).".format(run_topic.name, tweet_count,auth_name))
     iteration = 0
     save_bucket = s3_bucket
 
@@ -191,14 +185,22 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         iteration += 1
         outfile = run_topic.name + "_" + strftime("%Y%m%d%H%M%S", gmtime()) + ".json"
         run_stream = TwitterStream(name=run_topic.name, topic=run_topic, outfile=outfile, auth_name = auth_name)
+
         try:
             run_stream.startStream(tweet_count=tweet_count, async=True)
         except AttributeError:
             pass
-        print(iteration)
         # 3. Save file to S3
+        # TODO:  Try using stringIO: https://docs.python.org/2/library/stringio.html
+        duration = relativedelta.relativedelta(datetime.now(), start)
+        msg = (strftime("%Y-%m-%d %H:%M:%S",gmtime()) +
+              ": total_files({0}): duration({1} hours): Saving {2} to {3}."
+              .format(iteration,duration.hours,outfile, s3_path)
+        )
+        print(msg)
+        logging.info(msg)
+        
         s3 = connect_s3()
-        print("Saving {} to {}.".format(outfile, s3_path))
         key = s3_path + outfile
         try:
             s3.meta.client.upload_file(outfile, save_bucket, key)
@@ -206,5 +208,6 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
             print(e)
 
         # 4. Delete the temporary file
+        sleep(3)
         os.remove(outfile)
 

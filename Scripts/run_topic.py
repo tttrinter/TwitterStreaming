@@ -45,6 +45,8 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         run_stream = TwitterStream(name=run_topic.name, topic=run_topic, outfile=outfile)
         run_stream.startStream(tweet_count=tweet_count, async=True)
 
+        #TODO:  Do exclusions outside of stream
+
         # 3. Save file to S3
         print("Saving {} to {}.".format(outfile, s3_path))
         key = s3_path + outfile

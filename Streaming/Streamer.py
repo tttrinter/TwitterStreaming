@@ -3,7 +3,6 @@ resulting output files.
 """
 from tweepy import Stream,StreamListener,OAuthHandler
 from .Topic import Topic
-from TwitterFunctions import Twitter_config as config
 from time import sleep, gmtime, strftime
 import json
 import boto3
@@ -12,8 +11,7 @@ import os
 import io
 from datetime import datetime
 from dateutil import relativedelta
-
-import sys
+from Manager import notify
 
 def getTweepyAuth(auth_name):
     with open('Streaming/twitter_user_config.json') as cfg:
@@ -169,6 +167,7 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
     4. Delete the local file
     """
     start = datetime.now()
+    notify_us = True
     # 1. Create the topic and stream
     run_topic = Topic(topic_id=topic_id)
     run_topic.readTopic()
@@ -182,6 +181,11 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
     save_bucket = s3_bucket
 
     while True:
+        notified = True
+        if datetime.now().hour % 8 != 0:
+            notified = False
+        if iteration == 0 and notify_us:
+            notify.notify('Starting stream {}'.format(run_topic.name))
         iteration += 1
         outfile = run_topic.name + "_" + strftime("%Y%m%d%H%M%S", gmtime()) + ".json"
         run_stream = TwitterStream(name=run_topic.name, topic=run_topic, outfile=outfile, auth_name = auth_name)
@@ -208,6 +212,9 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
             print(e)
 
         # 4. Delete the temporary file
-        sleep(3)
         os.remove(outfile)
+
+        if datetime.now().hour % 8 == 0 and notify_us and not notified:
+            notify.notify('Still streaming {}'.format(run_topic.name))
+
 

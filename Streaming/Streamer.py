@@ -41,12 +41,15 @@ class FileOutListener(StreamListener):
     def on_error(self, status_code):
         if status_code == 420:
             logging.exception('Enhance Your Calm')
+            notify.notify('Enhance Your Calm')
             #returning False in on_data disconnects the stream
         elif status_code == 429:
             logging.exception('Rate Limited')
+            notify.notify('Rate Limited')
             return False
         else:
             logging.exception(status_code)
+            notify.notify('Stream Failed in module FileOutListener with status_code({0})'.format(status_code))
             return False
 
     def on_data(self, data):
@@ -136,6 +139,7 @@ class TwitterStream(object):
 
             # Bail out and save the file - change the tweet_count goal to equal the current value
             tweet_count = myStreamListener.result_count
+            notify.notify('Stream failed in module:  TwitterStream')
             raise
 
     # Check Exit Criteria
@@ -212,9 +216,13 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
             print(e)
 
         # 4. Delete the temporary file
-        os.remove(outfile)
+        sleep(3)
+        try:
+            os.remove(outfile)
+        except:
+            pass
 
         if datetime.now().hour % 8 == 0 and notify_us and not notified:
-            notify.notify('Still streaming {}'.format(run_topic.name))
+            notify.notify('Still streaming {0}'.format(run_topic.name))
 
 

@@ -5,6 +5,9 @@ Args: these have to be separated by spaces. Strings are in double quotes.
     3: s3_path - path to the right folder for this stream
     4: tweet_count - number of tweets to include in each file before cutting and re-starting - usually 1000
     5: auth_name - one of the accounts we have set up: tom, john, ben, ben2, jake, allison
+
+    Example:
+        start_stream.py 6 "di_thrivent" "twitter/Life Events/Moving/" 1000 john
 """
 
 import logging
@@ -16,7 +19,7 @@ from Streaming.Streamer import run_topic_continuous
 topic_id = sys.argv[1]
 s3_bucket = sys.argv[2]
 s3_path = sys.argv[3]
-tweet_count = sys.argv[4]
+tweet_count = int(sys.argv[4])
 auth_name = sys.argv[5]
 path_parts = s3_path.split("/")
 topic_name = path_parts[len(path_parts)-2].lower()
@@ -41,6 +44,7 @@ try:
                      s3_path=s3_path,
                      tweet_count=tweet_count,
                      auth_name = auth_name)
-except:
+except Exception as e:
+    logging.exception(e)
     notify.notify('{} stream failed in module start_stream.py'.format(topic_name))
 

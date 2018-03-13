@@ -75,6 +75,7 @@ def tweet_text_from_file(infile: str, startline=0, endline=9000000, exclusions =
 
     tweet_df = pd.DataFrame.from_dict(tweets)
     tweet_df.columns = ['tweet_id', 'text']
+    tweet_df.drop_duplicates(subset='text', keep='first',inplace=True)
 
     return tweet_df
 

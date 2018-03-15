@@ -11,8 +11,8 @@ def notify(message):
         Message=message
     )
 
-    # # Send your sms message.
-    # client.publish(
-    #     PhoneNumber="+13023771148",
-    #     Message=message
-    # )
+    # Send your sms message.
+    client.publish(
+        PhoneNumber="+13023771148",
+        Message=message
+    )

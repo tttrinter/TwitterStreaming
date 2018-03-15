@@ -278,6 +278,6 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, threshold=0.5, 
         except Exception as e:
             logging.exception(e)
             print(e)
-            pass
+            continue
 
 

@@ -16,7 +16,6 @@ class StemmedCountVectorizer(CountVectorizer):
     def build_analyzer(self):
         analyzer = super(StemmedCountVectorizer, self).build_analyzer()
         return lambda doc: ([english_stemmer.stem(w) for w in analyzer(doc)])
-
 logging.info("Processing graduation files.")
 process_s3_files(topic_id=1 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Graduation/', threshold=0.7)
 

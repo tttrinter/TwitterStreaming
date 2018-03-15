@@ -65,7 +65,7 @@ def tweet_text_from_file(infile: str, startline=0, endline=9000000, exclusions =
                     tweet_text = tweet_dict['text']
                     exclusion_count = len([x for x in exclusions if x in tweet_text])
                     if exclusion_count == 0:
-                        tweets.append({tweet_dict[tweet_key] for tweet_key in tweet_keys})
+                        tweets.append({k: tweet_dict.get(k, None) for k in tweet_keys})
                 except Exception as e:
                     logging.exception(e)
                     break

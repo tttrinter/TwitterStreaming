@@ -8,9 +8,9 @@ logging.basicConfig(filename='birth_stream.log',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
                     level=logging.INFO)
 try:
-    run_topic_continuous(topic_id=2,
+    run_topic_continuous(topic_id=6,
                      s3_bucket='di-thrivent',
-                     s3_path='twitter/Life Events/Birth/',
+                     s3_path='twitter/Life Events/Moving/',
                      tweet_count=1000,
                      auth_name = 'john')
 except:

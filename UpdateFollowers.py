@@ -53,6 +53,8 @@ def update_followers(leader_id_list: list=None, complete_ratio=0.99):
         i += 1
         existing_ids = get_prior_user_list(twitter_id, con)
         msg = "{}: {}: twitter_id = {}".format(i, datetime.strftime(datetime.now(), '%H:%M:%S'), twitter_id)
+        if i%10 == 0:
+            print(msg)
         logging.info(msg)
 
         df_one_leader = pd.DataFrame(columns=['tf_user_id', 'tf_follower_id'], dtype=str)
@@ -73,8 +75,8 @@ def update_followers(leader_id_list: list=None, complete_ratio=0.99):
                 # Remove known users - moved to get_followers function
                 df_one_leader = df_one_leader[~df_one_leader['tf_follower_id'].isin(existing_ids)]
 
-                # Writer new users back to the "college_followers" table
-                df_one_leader.to_sql('user_followers', con=engine, if_exists='append')
+                # Writer new users back to the "user_followers" table
+                df_one_leader.to_sql('user_followers', con=engine, if_exists='append', index=False)
                 new_record_count = len(df_one_leader)
 
                 # Update the follower_update_hist table

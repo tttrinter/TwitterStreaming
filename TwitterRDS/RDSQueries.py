@@ -299,11 +299,13 @@ def update_follower_hist(leaderId, record_count, con=None):
     if con is None:
         con = RDSconfig.get_connection()
 
+    cur = con.cursor()
+
     update_time = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S')
     SQL = "INSERT INTO follower_update_hist (fu_twitter_id, fu_records_added, fu_update_date) VALUES ("
     SQL = SQL + str(leaderId) +"," + str(record_count)+ ", '" + update_time + "')"
 
-    con.execute(SQL)
+    cur.execute(SQL)
     con.commit()
 
 

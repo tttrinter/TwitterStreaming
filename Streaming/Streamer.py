@@ -27,16 +27,17 @@ def getTweepyAuth(auth_name):
 
 # This is the listener, responsible for receiving data
 class FileOutListener(StreamListener):
-    def __init__(self, outfile, limit=100, filter=[], exclusions=[]):
+    def __init__(self, limit=100, filter=[], exclusions=[]):
         # Note this intentionally does not process each tweet object inline, just dumps to file.
         # Streams of tweets can be detected at several per second
         self.result_count = 0
         self.filter = filter
         self.exclusions = exclusions
         self.limit = limit
-        #self.last_update_time = datetime.now()
-        self.outfile = outfile
-        self.fileout = open(outfile, 'a') #io.StringIO()
+        self.output = io.StringIO()
+
+    def get_tweets(self):
+        return self.output.getvalue()
 
     def on_error(self, status_code):
         if status_code == 420:
@@ -80,7 +81,7 @@ class FileOutListener(StreamListener):
             exclusion_count = 0
         if (filter_count > 0 and exclusion_count == 0):
             self.result_count += 1
-            self.fileout.write(data.rstrip('\n'))
+            self.output.write(data.rstrip('\n'))
         return
 
     def on_status(self, status):
@@ -101,17 +102,21 @@ class TwitterStream(object):
         dest: this is the destination for the data - currently only writing to file
         future could change this to select file, database, or other output destination
     """
-    def __init__(self, name: str, topic: Topic, outfile: str, auth_name: str):
+    def __init__(self, name: str, topic: Topic, auth_name: str):
         self.name = name
         self.topic = topic
-        self.outfile = outfile
+        self.tweet_count = 10
         self.auth_name = auth_name
+        self.myStreamListener = FileOutListener(filter=self.topic.filters,
+                                                exclusions=self.topic.exclusions,
+                                                limit=self.tweet_count)
 
     def startStream(self, run_time=None, tweet_count=None, async=False):
 
         # Set up time variables - used to cutoff the stream when run_time is not none
         # Also used to keep track of time since last update - to cut off dead streams
         start_time = datetime.now()
+        self.tweet_count = tweet_count
         time_since_udate = 0
         if len(self.topic.filters) < 1:
             raise Exception("Topic missing filter terms.")
@@ -119,13 +124,8 @@ class TwitterStream(object):
             filters = self.topic.filters
 
     #override tweepy.StreamListener to add logic to on_status
-
-        myStreamListener = FileOutListener(outfile=self.outfile,
-                                           filter=self.topic.filters,
-                                           exclusions=self.topic.exclusions,
-                                           limit=tweet_count)
         auth = getTweepyAuth(auth_name=self.auth_name)
-        myStream = Stream(auth=auth, listener=myStreamListener)
+        myStream = Stream(auth=auth, listener=self.myStreamListener)
         try:
             myStream.filter(languages=["en"], track=filters, async=async)
         except Exception as e:
@@ -138,7 +138,7 @@ class TwitterStream(object):
                 sleep(300)
 
             # Bail out and save the file - change the tweet_count goal to equal the current value
-            tweet_count = myStreamListener.result_count
+            tweet_count = self.myStreamListener.result_count
             notify.notify('Stream failed in module:  TwitterStream')
             raise
 
@@ -152,10 +152,10 @@ class TwitterStream(object):
 
         # Tweet Count
         if tweet_count is not None:
-            while myStreamListener.result_count < tweet_count:
+            while self.myStreamListener.result_count < tweet_count:
                 pass
             else:
-                myStream.disconnect()
+                self.myStream.disconnect()
         return
 
 def connect_s3():
@@ -191,36 +191,29 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         if iteration == 0 and notify_us:
             notify.notify('Starting stream {}'.format(run_topic.name))
         iteration += 1
-        outfile = run_topic.name + "_" + strftime("%Y%m%d%H%M%S", gmtime()) + ".json"
-        run_stream = TwitterStream(name=run_topic.name, topic=run_topic, outfile=outfile, auth_name = auth_name)
+        run_stream = TwitterStream(name=run_topic.name, topic=run_topic, auth_name=auth_name)
 
         try:
             run_stream.startStream(tweet_count=tweet_count, async=True)
         except AttributeError:
             pass
-        # 3. Save file to S3
-        # TODO:  Try using stringIO: https://docs.python.org/2/library/stringio.html
+
+        # 3. Save tweets to S3
+        s3 = connect_s3()
+        outfilename = run_topic.name + "_" + strftime("%Y%m%d%H%M%S", gmtime()) + ".json"
+        key = s3_path + outfilename
+        object = s3.Object('di-thrivent', key)
+        tweets = run_stream.myStreamListener.output.getvalue()
+        object.put(Body=tweets)
+        #run_stream.myStreamListener.output.close()
+
         duration = relativedelta.relativedelta(datetime.now(), start)
         msg = (strftime("%Y-%m-%d %H:%M:%S",gmtime()) +
               ": total_files({0}): duration({1} hours): Saving {2} to {3}."
-              .format(iteration,duration.hours,outfile, s3_path)
+              .format(iteration,duration.hours,outfilename,s3_path)
         )
         print(msg)
         logging.info(msg)
-
-        s3 = connect_s3()
-        key = s3_path + outfile
-        try:
-            s3.meta.client.upload_file(outfile, save_bucket, key)
-        except Exception as e:
-            print(e)
-
-        # 4. Delete the temporary file
-        sleep(3)
-        try:
-            os.remove(outfile)
-        except:
-            pass
 
         if datetime.now().hour % 8 == 0 and notify_us and not notified:
             notify.notify('Still streaming {0}'.format(run_topic.name))

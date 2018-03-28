@@ -128,6 +128,8 @@ class TwitterStream(object):
         myStream = Stream(auth=auth, listener=self.myStreamListener)
         try:
             myStream.filter(languages=["en"], track=filters, async=async)
+        except AttributeError:
+            pass
         except Exception as e:
             logging.exception(e)
             # Doobie Break - if we get the Twitter chill-out error, stop trying for 5 minutes

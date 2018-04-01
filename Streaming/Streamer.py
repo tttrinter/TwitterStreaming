@@ -27,13 +27,12 @@ def getTweepyAuth(auth_name):
 
 # This is the listener, responsible for receiving data
 class FileOutListener(StreamListener):
-    def __init__(self, limit=100, filter=[], exclusions=[]):
+    def __init__(self, filter=[], exclusions=[]):
         # Note this intentionally does not process each tweet object inline, just dumps to file.
         # Streams of tweets can be detected at several per second
         self.result_count = 0
         self.filter = filter
         self.exclusions = exclusions
-        self.limit = limit
         self.output = io.StringIO()
 
     def get_tweets(self):
@@ -43,6 +42,7 @@ class FileOutListener(StreamListener):
         if status_code == 420:
             logging.exception('Enhance Your Calm')
             notify.notify('Enhance Your Calm')
+            sleep(300)
             #returning False in on_data disconnects the stream
         elif status_code == 429:
             logging.exception('Rate Limited')
@@ -56,7 +56,7 @@ class FileOutListener(StreamListener):
     def on_data(self, data):
         # Twitter returns data in JSON format - we need to decode it first
         # data = status._json
-        #self.last_update_time = datetime.now()
+        self.last_update_time = datetime.now()
         try:
             if data is not None:
                 decoded = json.loads(data)
@@ -107,9 +107,7 @@ class TwitterStream(object):
         self.topic = topic
         self.tweet_count = 10
         self.auth_name = auth_name
-        self.myStreamListener = FileOutListener(filter=self.topic.filters,
-                                                exclusions=self.topic.exclusions,
-                                                limit=self.tweet_count)
+        self.myStreamListener = FileOutListener()
 
     def startStream(self, run_time=None, tweet_count=None, async=False):
 
@@ -123,8 +121,10 @@ class TwitterStream(object):
         else:
             filters = self.topic.filters
 
-    #override tweepy.StreamListener to add logic to on_status
         auth = getTweepyAuth(auth_name=self.auth_name)
+        self.myStreamListener = FileOutListener(filter=self.topic.filters,
+                                                exclusions=self.topic.exclusions
+                                                )
         myStream = Stream(auth=auth, listener=self.myStreamListener)
         try:
             myStream.filter(languages=["en"], track=filters, async=async)
@@ -184,7 +184,6 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
     # 2. Start Twitter stream running
     print("Starting {0} stream for {1} tweets using auth({2}).".format(run_topic.name, tweet_count,auth_name))
     iteration = 0
-    save_bucket = s3_bucket
 
     while True:
         notified = True

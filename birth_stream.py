@@ -8,10 +8,11 @@ logging.basicConfig(filename='birth_stream.log',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
                     level=logging.INFO)
 try:
+    logging.info("Starting via birth_stream.py")
     run_topic_continuous(topic_id=2,
                      s3_bucket='di-thrivent',
                      s3_path='twitter/Life Events/Birth/',
-                     tweet_count=1000,
+                     tweet_count=2,
                      auth_name = 'john')
 except:
     notify.notify('Birth stream failed in module birth_stream.py')

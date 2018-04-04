@@ -13,7 +13,8 @@ try:
                      s3_bucket='di-thrivent',
                      s3_path='twitter/Life Events/Birth/',
                      tweet_count=2,
-                     auth_name = 'john')
-except:
+                     auth_name = 'jake')
+except Exception as e:
+    logging.error(e)
     notify.notify('Birth stream failed in module birth_stream.py')
 

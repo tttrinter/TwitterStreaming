@@ -186,7 +186,7 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         quit()
 
     # 2. Start Twitter stream running
-    logging.info("Starting {0} stream for {1} tweets using auth({2}).".format(run_topic.name, tweet_count,auth_name))
+    logging.info("run_top_cont: Starting {0} stream for {1} tweets using auth({2}).".format(run_topic.name, tweet_count,auth_name))
     print("Starting {0} stream for {1} tweets using auth({2}).".format(run_topic.name, tweet_count,auth_name))
     iteration = 0
 

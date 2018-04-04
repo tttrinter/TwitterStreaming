@@ -12,6 +12,7 @@ Topics are stored in the database in the "topics" table.
 from typing import List, DefaultDict
 from TwitterRDS import RDSQueries as q
 from .Model import Model
+import logging
 
 class Topic(object):
     """
@@ -57,7 +58,9 @@ class Topic(object):
         Returns:
             topic: the populated Topic object
     """
+        logging.info("readTopic.")
         topic_dict = q.read_topic(self.topic_id, con=db)
+        logging.info("readTopic: topicDict: {0}".format(topic_dict))
         if topic_dict is not None:
             for key in topic_dict:
                 if key in ['filters', 'exclusions']:
@@ -66,6 +69,7 @@ class Topic(object):
                 else:
                     self.__setattr__(key, topic_dict[key])
         else:
+            logging.info("readTopic: topicDict is none.")
             return
 
         # For some reason the model list was lingering from previous topics - clear it out if necessary

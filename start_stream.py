@@ -7,7 +7,8 @@ Args: these have to be separated by spaces. Strings are in double quotes.
     5: auth_name - one of the accounts we have set up: tom, john, ben, ben2, jake, allison
 
     Example:
-        start_stream.py 6 "di_thrivent" "twitter/Life Events/Moving/" 1000 john
+        python start_stream.py 6 "di_thrivent" "twitter/Life Events/Moving/" 1000 john
+        python start_stream.py 2 "di-thrivent" "twitter/Life Events/Birth/" 100 allison
 """
 
 import logging

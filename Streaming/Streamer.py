@@ -116,6 +116,7 @@ class TwitterStream(object):
         start_time = datetime.now()
         self.tweet_count = tweet_count
         time_since_udate = 0
+        logging.info("Streamer.startStream: tweet_count= {0}.".format(tweet_count))
         if len(self.topic.filters) < 1:
             raise Exception("Topic missing filter terms.")
         else:
@@ -126,6 +127,8 @@ class TwitterStream(object):
                                                 exclusions=self.topic.exclusions
                                                 )
         myStream = Stream(auth=auth, listener=self.myStreamListener)
+        logging.info("Streamer.startStream: started new stream.")
+
         try:
             myStream.filter(languages=["en"], track=filters, async=async)
         except AttributeError:
@@ -142,6 +145,7 @@ class TwitterStream(object):
             # Bail out and save the file - change the tweet_count goal to equal the current value
             tweet_count = self.myStreamListener.result_count
             notify.notify('Stream failed in module:  TwitterStream')
+            logging.error('Stream failed in module:  TwitterStream')
             raise
 
     # Check Exit Criteria
@@ -182,6 +186,7 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         quit()
 
     # 2. Start Twitter stream running
+    logging.info("run_top_cont: Starting {0} stream for {1} tweets using auth({2}).".format(run_topic.name, tweet_count,auth_name))
     print("Starting {0} stream for {1} tweets using auth({2}).".format(run_topic.name, tweet_count,auth_name))
     iteration = 0
 

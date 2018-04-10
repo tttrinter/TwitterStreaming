@@ -34,15 +34,22 @@ class FileOutListener(StreamListener):
         self.filter = filter
         self.exclusions = exclusions
         self.output = io.StringIO()
+        self.ec_count = 0 # count 420 errors. the time-out period will be 5 min * this count
+        # reset the count at 30
 
     def get_tweets(self):
         return self.output.getvalue()
 
     def on_error(self, status_code):
         if status_code == 420:
+            if self.ec_count == 30:
+                self.ec_count = 0  # reset to zero after a very long wait
+
+            self.ec_count += 1
             logging.exception('Enhance Your Calm')
             notify.notify('Enhance Your Calm')
-            sleep(300)
+            print("{} 420 Errors. Sleeping for {} minutes.".format(self.ec_count, self.ec_count*5))
+            sleep(300*self.ec_count)
             #returning False in on_data disconnects the stream
         elif status_code == 429:
             logging.exception('Rate Limited')

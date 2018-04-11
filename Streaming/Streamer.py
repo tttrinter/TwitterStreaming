@@ -67,7 +67,11 @@ class FileOutListener(StreamListener):
         try:
             if data is not None:
                 decoded = json.loads(data)
-                tweet_text = decoded['text'].lower()
+                # add check for "text" key to resolve recurring error.
+                if 'text' in decoded:
+                    tweet_text = decoded['text'].lower()
+                else:
+                    return
             else:
                 return
 

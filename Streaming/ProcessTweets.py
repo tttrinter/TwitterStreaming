@@ -11,7 +11,7 @@ right filters and models for processing.
 from Entweeties import Tweet, TwitterUser
 from TwitterRDS.RDSEntweeties import merge_tweet
 from  TwitterRDS import RDSQueries as q
-from TwitterFunctions.TwitterProcessing import clean_text_col, MeanEmbeddingVectorizer
+from TwitterFunctions.TwitterProcessing import clean_text_col
 from .Topic import Topic
 
 import json

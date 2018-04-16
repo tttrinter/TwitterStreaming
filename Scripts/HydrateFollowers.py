@@ -16,8 +16,8 @@ for users of interest.
 import logging
 from numpy import ceil
 from datetime import datetime
-from TwitterFunctions.AQTwitterFunctions import get_users
-from TwitterFunctions.AQTwitterProcessing import parse_it
+from TwitterFunctions.TwitterFunctions import get_users
+from TwitterFunctions.TwitterProcessing import parse_it
 from TwitterRDS.RDSQueries import get_dehydrated_followers
 from TwitterRDS import RDSconfig
 

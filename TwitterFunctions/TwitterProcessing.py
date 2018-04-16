@@ -13,6 +13,7 @@ All that is left is "parse_it"
 import pandas as pd
 import re
 import os
+import string
 from nltk.tokenize import TweetTokenizer
 
 root = os.path.expanduser('~')
@@ -57,6 +58,33 @@ def parse_it(tweetText):
 # 1. Look for comma space and two capital letters as the common state identifyer
 
 
+def clean_text_col(df, text_col, new_col):
+    """
+    Cleans a pandas dataframe text column removing punctuation, hyperlinks, and non-ascii chars and splits
+    the field into a list, adding the new column to the dataframe.
+
+    :param df: pandas dataframe to modify
+    :param text_col: string, name of the text column to clean
+    :param new_col: string, name of the new column where the list of terms will go
+    :return: returns the dataframe passed in with the addition of the new, cleaned column
+    """
+
+    table = str.maketrans({key: None for key in string.punctuation})
+    df[new_col] = [str(s).translate(table) for s in df[text_col]]
+
+    # Remove non ascii characters
+    df[new_col] = [str(x).encode('ascii', 'ignore').decode('ascii') for x in df[new_col]]
+
+    # Remove carriage returns
+    df[new_col] = [str(x).replace("\r", '').replace('\n','') for x in df[new_col]]
+
+    # Remove hyperlinks and split into words
+    df[new_col] = [re.sub(r'\w+:\/{2}[\d\w-]+(\.[\d\w-]+)*(?:(?:\/[^\s/]*))*', '',
+                        x.lower()).split() for x in df[new_col]]
+
+    return df
+
+
 def find_state_abrv(loc):
     if len(loc) == 2:
         loc = " " + loc
@@ -69,6 +97,7 @@ def find_state_abrv(loc):
         state = loc[start+1:start+4]
         state = state.upper()
     return state
+
 
 # Since the states are written out in the Google location list, we'll find the written out state names
 # Start with the 2 letter abbreviation first - then look for full state name if no abbrev. found

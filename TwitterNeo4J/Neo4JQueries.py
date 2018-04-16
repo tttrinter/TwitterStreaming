@@ -11,7 +11,7 @@ Not currently used.
 
 from neo4j.v1 import GraphDatabase, basic_auth
 from datetime import datetime
-from TwitterFunctions.AQTwitterFunctions import get_followers
+from TwitterFunctions.TwitterFunctions import get_followers
 from TwitterNeo4J import Neo4J_config
 
 def connect_neo4j():

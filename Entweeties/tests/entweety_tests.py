@@ -1,6 +1,6 @@
 from Entweeties import Tweet
 from TwitterNeo4J.Neo4JEntweeties import get_user_data, merge_user, merge_tweet
-from TwitterFunctions.AQTwitterFunctions import hydrate_user
+from TwitterFunctions.TwitterFunctions import hydrate_user
 import ast
 
 # Test creating objects

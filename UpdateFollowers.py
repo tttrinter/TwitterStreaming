@@ -15,7 +15,7 @@ import sys
 import pandas as pd
 import logging
 from datetime import datetime
-from TwitterFunctions.AQTwitterFunctions import get_followers
+from TwitterFunctions.TwitterFunctions import get_followers
 from TwitterRDS.RDSQueries import get_prior_user_list, update_follower_hist, get_leader_indicator_ids
 from TwitterRDS import RDSconfig
 

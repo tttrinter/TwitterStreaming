@@ -11,7 +11,9 @@ right filters and models for processing.
 from Entweeties import Tweet, TwitterUser
 from TwitterRDS.RDSEntweeties import merge_tweet
 from  TwitterRDS import RDSQueries as q
+from TwitterFunctions.TwitterProcessing import clean_text_col, MeanEmbeddingVectorizer
 from .Topic import Topic
+
 import json
 import pandas as pd
 import pickle
@@ -20,6 +22,9 @@ import logging
 
 from sklearn.feature_extraction.text import CountVectorizer
 from nltk.stem import SnowballStemmer
+# import gensim
+
+# import numpy as np
 
 
 def get_processed_key(file_key: str):
@@ -77,6 +82,8 @@ def tweet_text_from_file(infile: str, startline=0, endline=9000000, exclusions =
     tweet_df.columns = ['tweet_id', 'text']
     tweet_df.drop_duplicates(subset='text', keep='first',inplace=True)
 
+    # Clean the text column, removing hyper links, punctuation, and non ascii chars.
+    tweet_df = clean_text_col(tweet_df, 'text', 'clean_text')
     return tweet_df
 
 
@@ -97,12 +104,11 @@ def classify_tweets(tweet_df: pd.DataFrame, pickled_model: str, pickled_vectoriz
         probabilities from the classification model. This is for binary classifiers only at this point.
     """
 
-
     # Load the model
     model = pickle.load(open(pickled_model, 'rb'))
-    vectorizer_s = pickle.load(open(pickled_vectorizer, 'rb'))
+    vectorizer = pickle.load(open(pickled_vectorizer, 'rb'))
 
-    data_features = vectorizer_s.transform(tweet_df['text'].astype(str))
+    data_features = vectorizer.transform(tweet_df['text'].astype(str))
     try:
         predictions = model.predict_proba(data_features)
         tweet_df[model_var] = [i[1] for i in predictions]
@@ -242,13 +248,13 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, threshold=0.5, 
 
     # Prepare the vectorizer - this is what extracts the vocabulary terms from the tweets
     # creating the custom, stemmed count vectorizer
-    english_stemmer = SnowballStemmer('english')
+    # english_stemmer = SnowballStemmer('english')
 
-    class StemmedCountVectorizer(CountVectorizer):
-        def build_analyzer(self):
-            analyzer = super(StemmedCountVectorizer, self).build_analyzer()
-            return lambda doc: ([english_stemmer.stem(w) for w in analyzer(doc)])
-
+    # class StemmedCountVectorizer(CountVectorizer):
+    #     def build_analyzer(self):
+    #         analyzer = super(StemmedCountVectorizer, self).build_analyzer()
+    #         return lambda doc: ([english_stemmer.stem(w) for w in analyzer(doc)])
+    #
 
     # Process each file
     for file_key in files:

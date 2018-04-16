@@ -1,6 +1,6 @@
 import sqlite3
 import pandas as pd
-from TwitterFunctions.AQTwitterFunctions import get_users
+from TwitterFunctions.TwitterFunctions import get_users
 
 #Connect to SQLlite DB to get some test data:
 # data_path = 'D:\\AQ\\Clients\\Thrivent\\'

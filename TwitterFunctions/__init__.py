@@ -1,2 +1,2 @@
-from .AQTwitterFunctions import *
-from .AQTwitterProcessing import *
+from .TwitterFunctions import *
+from .TwitterProcessing import *

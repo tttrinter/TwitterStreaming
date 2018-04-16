@@ -10,7 +10,7 @@ we've moved over to Postgres, SQLite development has stopped, so some of that co
 """
 
 from datetime import datetime
-from TwitterFunctions.AQTwitterFunctions import get_followers, parse_it
+from TwitterFunctions.TwitterFunctions import get_followers, parse_it
 from . import RDSconfig
 import pandas as pd
 from datetime import datetime

@@ -83,11 +83,12 @@ def tweet_text_from_file(infile: str, startline=0, endline=9000000, exclusions =
     tweet_df.drop_duplicates(subset='text', keep='first',inplace=True)
 
     # Clean the text column, removing hyper links, punctuation, and non ascii chars.
-    tweet_df = clean_text_col(tweet_df, 'text', 'clean_text')
+    tweet_df = clean_text_col(tweet_df, 'text', 'clean_text', False )
+    tweet_df = clean_text_col(tweet_df, 'text', 'clean_text_list', True )
     return tweet_df
 
 
-def classify_tweets(tweet_df: pd.DataFrame, pickled_model: str, pickled_vectorizer: str, model_var: str):
+def classify_tweets(tweet_df: pd.DataFrame, pickled_model: str, pickled_vectorizer: str, model_var: str, model_type: str):
     """
     Processes a dataframe of tweets (resulting from passing an S3 tweet file through tweet_text_from_file)
     and classifies each tweet with the models passed in. Adds the probability of "success" to the data frame.
@@ -108,7 +109,11 @@ def classify_tweets(tweet_df: pd.DataFrame, pickled_model: str, pickled_vectoriz
     model = pickle.load(open(pickled_model, 'rb'))
     vectorizer = pickle.load(open(pickled_vectorizer, 'rb'))
 
-    data_features = vectorizer.transform(tweet_df['text'].astype(str))
+    if model_type == 'w2v':
+        data_features = vectorizer.transform(tweet_df['clean_text_list'].astype(str))
+    else:
+        data_features = vectorizer.transform(tweet_df['clean_text'].astype(str))
+
     try:
         predictions = model.predict_proba(data_features)
         tweet_df[model_var] = [i[1] for i in predictions]
@@ -145,7 +150,8 @@ def run_topic_models(infile: str, topic: Topic, startline=0, endline=9000000):
             tweet_df = classify_tweets(tweet_df=tweet_df,
                                        pickled_model=model.model_path+model.filename,
                                        pickled_vectorizer=model.model_path+model.vectorizer,
-                                       model_var=model.name)
+                                       model_var=model.name,
+                                       model_type=model.type)
         except Exception as e:
             logging.exception(e)
             return

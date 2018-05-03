@@ -173,6 +173,27 @@ def check_for_user(user_id, con=None):
         return -1
 
 
+def check_for_usernames(user_id, con=None):
+    """
+    Checks the database for a record in the user_names table to avoid duplicates
+    :param user_id: Twitter user id
+    :param con: database connection. Uses default if none.
+    :return: user_id, or -1 if not found.
+    """
+    if con is None:
+        con = RDSconfig.get_connection()
+    SQL = 'SELECT "un_user_id" FROM user_names WHERE "un_user_id"={}'.format(user_id)
+    try:
+        user = pd.read_sql(SQL, con=con)
+    except Exception as e:
+        return e
+
+    if len(user) > 0:
+        return user_id
+    else:
+        return -1
+
+
 def insert_user(id, name, screen_name,
                 location=None, followers_count=None, friends_count=None, favourites_count=None,
                 description=None, geo_enabled=None, lang=None, statuses_count=None,
@@ -544,3 +565,39 @@ def get_dehydrated_followers(minid=0, limit=10000, con=None):
         return list(id_df['tf_follower_id'])
     else:
         return None
+
+
+def upsert_usernames(user_id, names, con=None):
+
+    if con is None:
+        con = RDSconfig.get_connection()
+        cur = con.cursor()
+    uid = check_for_usernames(user_id, con)
+
+    if uid > 0:
+        # update record
+        SQL = """ UPDATE user_names
+        SET un_first_name = '{}', 
+        un_last_name = '{}',
+        un_first_match = {},
+        un_last_match = {}
+        WHERE un_user_id = {}""".format(names['first'],
+                                        names['last'],
+                                        names['first_match'],
+                                        names['last_match'],
+                                        user_id)
+    else:
+        SQL = """INSERT INTO user_names (
+        un_first_name, 
+        un_last_name,
+        un_first_match,
+        un_last_match, 
+        un_user_id)
+        VALUES ('{}','{}', {}, {}, {})""".format(names['first'],
+                                        names['last'],
+                                        names['first_match'],
+                                        names['last_match'],
+                                        user_id)
+
+    cur.execute(SQL)
+    con.commit()

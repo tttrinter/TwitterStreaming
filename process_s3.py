@@ -51,4 +51,4 @@ process_s3_files(topic_id=2 ,s3bucket='di-thrivent', s3prefix='twitter/Life Even
 msg = "Processing moving files."
 logging.info(msg)
 print(msg)
-process_s3_files(topic_id=6 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Moving/', threshold=0.7)
+process_s3_files(topic_id=6 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Moving/', threshold=0.5)

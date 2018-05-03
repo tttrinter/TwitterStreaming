@@ -9,8 +9,8 @@ we've moved over to Postgres, SQLite development has stopped, so some of that co
 @author: tom trinter
 """
 
-from datetime import datetime
-from TwitterFunctions.TwitterFunctions import get_followers, parse_it
+# from datetime import datetime
+from TwitterFunctions import get_followers, parse_it
 from . import RDSconfig
 import pandas as pd
 from datetime import datetime

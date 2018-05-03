@@ -13,11 +13,14 @@ All that is left is "parse_it"
 import pandas as pd
 import re
 import os
+# import sys
 import string
 from nltk.tokenize import TweetTokenizer
 
 root = os.path.expanduser('~')
-filepath = "D:\\OneDrive\\Documents\\Data Insights\\Clients\\Thrivent\\Twitter\\TwitterFunctions\\"
+# filepath = "D:\\OneDrive\\Documents\\Data Insights\\Clients\\Thrivent\\Twitter\\TwitterFunctions\\"
+filepath = ".\\data_files\\"
+# print(sys.path[0])
 
 def parse_it(tweetText):
     """
@@ -69,13 +72,14 @@ def clean_text_col(df, text_col, new_col, blist=False):
     :param blist: boolean, return string or list. When true, results are split by spaces and returned as a list
     :return: returns the dataframe passed in with the addition of the new, cleaned column
     """
+
     table = str.maketrans({key: None for key in string.punctuation})
     df[new_col] = [str(s).translate(table) for s in df[text_col]]
 
     # Remove non ascii characters
     df[new_col] = [str(x).encode('ascii', 'ignore').decode('ascii') for x in df[new_col]]
 
-    # Remove carriage returns and new lines
+    # Remove carriage returns
     df[new_col] = [str(x).replace("\r", '').replace('\n', '') for x in df[new_col]]
 
     # Remove hyperlinks and split into words
@@ -155,7 +159,7 @@ def get_name(tweet_name):
              }
 
     try:
-        twitter_name = str(tweet_name)
+        # twitter_name = str(tweet_name)
         twitter_name = re.sub('["]', '', tweet_name)
     except:
         print(tweet_name)

@@ -110,9 +110,9 @@ def classify_tweets(tweet_df: pd.DataFrame, pickled_model: str, pickled_vectoriz
     vectorizer = pickle.load(open(pickled_vectorizer, 'rb'))
 
     if model_type == 'w2v':
-        data_features = vectorizer.transform(tweet_df['clean_text_list'].astype(str))
+        data_features = vectorizer.transform(tweet_df['clean_text_list'])
     else:
-        data_features = vectorizer.transform(tweet_df['clean_text'].astype(str))
+        data_features = vectorizer.transform(tweet_df['clean_text'])
 
     try:
         predictions = model.predict_proba(data_features)

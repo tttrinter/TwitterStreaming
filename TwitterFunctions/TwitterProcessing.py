@@ -19,7 +19,7 @@ from nltk.tokenize import TweetTokenizer
 
 root = os.path.expanduser('~')
 # filepath = "D:\\OneDrive\\Documents\\Data Insights\\Clients\\Thrivent\\Twitter\\TwitterFunctions\\"
-filepath = ".\\data_files\\"
+filepath = os.getcwd() + "\data_files\\"
 # print(sys.path[0])
 
 def parse_it(tweetText):

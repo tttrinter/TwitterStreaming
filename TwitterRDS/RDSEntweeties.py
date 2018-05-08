@@ -11,7 +11,7 @@ we've moved over to Postgres, SQLite development has stopped, so some of that co
 
 from . import RDSQueries as q
 from . import RDSconfig
-from TwitterFunctions import parse_it
+from TwitterFunctions import parse_it, find_long_state, get_name
 from Entweeties import TwitterUser, Tweet
 
 def get_user_data(u: TwitterUser):
@@ -84,10 +84,22 @@ def merge_user(user: TwitterUser, con=None):
 
     else:
         # INSERT
-        q.insert_user(user.id, user.name, user.screen_name,user.location,
+        user_id = q.insert_user(user.id, user.name, user.screen_name,user.location,
                       user.followers_count, user.friends_count, user.favourites_count, user.description,
                       user.geo_enabled, user.lang,user.statuses_count, user.time_zone, user.created_at, user.verified,
                       user.utc_offset, user.contributors_enabled, user.listed_count, user.protected, user.url,con=con)
+
+    # user post-processing
+    if user_id > 0:
+        # long state
+        long_state = find_long_state(user.location)
+        if long_state != "":
+            update_state(user_id, long_state, con)
+
+        # names
+        names = get_name(user.name)
+        if names['first'] is not None or names['last'] is not None:
+            q.upsert_usernames(user_id, names, con)
 
 
 def merge_tweet(tweet: Tweet, con=None):
@@ -132,3 +144,11 @@ def merge_tweet(tweet: Tweet, con=None):
             print(e)
             return -1
 
+
+def update_state(user_id, state, conn):
+    SQL = """UPDATE users 
+            SET state = '{}'
+            WHERE id = {}""".format(state, user_id)
+    cur = conn.cursor()
+    cur.execute(SQL)
+    conn.commit

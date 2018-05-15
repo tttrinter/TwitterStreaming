@@ -63,36 +63,36 @@ class FileOutListener(StreamListener):
     def on_data(self, data):
         # Twitter returns data in JSON format - we need to decode it first
         # data = status._json
-        self.last_update_time = datetime.now()
-        try:
-            if data is not None:
-                decoded = json.loads(data)
-                # add check for "text" key to resolve recurring error.
-                if 'text' in decoded:
-                    tweet_text = decoded['text'].lower()
-                else:
-                    return
-            else:
-                return
-
-            if 'user' not in decoded:
-                return
-            elif decoded['user']['lang'] != 'en':
-                return
-
-        except Exception as e:
-            logging.exception(e)
-            return
-
-        filter_count = len([x for x in self.filter if x in tweet_text])
-        # Only save if there are none of the exclusion terms
-        if len(self.exclusions) > 0:
-            exclusion_count = len([x for x in self.exclusions if x in tweet_text])
-        else:
-            exclusion_count = 0
-        if (filter_count > 0 and exclusion_count == 0):
-            self.result_count += 1
-            self.output.write(data.rstrip('\n'))
+        # self.last_update_time = datetime.now()
+        # try:
+        #     if data is not None:
+        #         decoded = json.loads(data)
+        #         # add check for "text" key to resolve recurring error.
+        #         if 'text' in decoded:
+        #             tweet_text = decoded['text'].lower()
+        #         else:
+        #             return
+        #     else:
+        #         return
+        #
+        #     if 'user' not in decoded:
+        #         return
+        #     elif decoded['user']['lang'] != 'en':
+        #         return
+        #
+        # except Exception as e:
+        #     logging.exception(e)
+        #     return
+        #
+        # filter_count = len([x for x in self.filter if x in tweet_text])
+        # # Only save if there are none of the exclusion terms
+        # if len(self.exclusions) > 0:
+        #     exclusion_count = len([x for x in self.exclusions if x in tweet_text])
+        # else:
+        #     exclusion_count = 0
+        # if (filter_count > 0 and exclusion_count == 0):
+        self.result_count += 1
+        self.output.write(data.rstrip('\n'))
         return
 
     def on_status(self, status):

@@ -22,6 +22,7 @@ from TwitterRDS import RDSconfig
 source = 'postgres'
 # source = 'sqllite'
 
+print("Starting UpdateFollowers")
 # Set up log
 logging.basicConfig(filename='UpdateFollowers.log',
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',

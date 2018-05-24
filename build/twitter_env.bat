@@ -30,3 +30,5 @@ rem modify the .ssh/config file:
 rem Host git-codecommit.us-east-1.amazonaws.com
 rem  User [new SSH key id from IAM]
 rem  IdentityFile ~/.ssh/[rsa file name]
+
+rem Copy models from https://drive.google.com/drive/folders/1htCJL_-2pCQZpc0DPqe0HhSpXFbWhdHQ to C:\Users\Administrator\Documents\Clients\Thrivent\Twitter\Life Events\

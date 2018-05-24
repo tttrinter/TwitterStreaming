@@ -85,6 +85,8 @@ def clean_text_col(df, text_col, new_col, blist=False):
     # Remove hyperlinks and split into words
     df[new_col] = [re.sub(r'http\S+', '', x.lower()) for x in df[new_col]]
 
+    # Delete any rows with no text remaining
+
     # Create list if blist=True
     if blist:
         df[new_col] = [x.split() for x in df[new_col]]

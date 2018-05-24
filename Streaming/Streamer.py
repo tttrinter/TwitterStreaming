@@ -222,7 +222,7 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         object = s3.Object('di-thrivent', key)
         tweets = run_stream.myStreamListener.output.getvalue()
         object.put(Body=tweets)
-        #run_stream.myStreamListener.output.close()
+        run_stream.myStreamListener.output.close()
 
         duration = relativedelta.relativedelta(datetime.now(), start)
         msg = (strftime("%Y-%m-%d %H:%M:%S",gmtime()) +

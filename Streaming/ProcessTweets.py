@@ -39,7 +39,7 @@ def get_processed_key(file_key: str):
         """
 
     path_pieces = file_key.split('/')
-    path_pieces.insert(len(path_pieces) - 1, 'Processed')
+    path_pieces.insert(len(path_pieces) - 2, 'Processed')
     processed_key = ''
     for piece in path_pieces:
         processed_key += "/" + piece

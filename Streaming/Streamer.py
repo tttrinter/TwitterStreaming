@@ -173,7 +173,7 @@ class TwitterStream(object):
             while self.myStreamListener.result_count < tweet_count:
                 pass
             else:
-                self.myStream.disconnect()
+                myStream.disconnect()
         return
 
 def connect_s3():
@@ -222,7 +222,13 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
 
         try:
             run_stream.startStream(tweet_count=tweet_count, async=True)
-        except AttributeError:
+
+        # except AttributeError:
+        #     pass
+
+        except Exception as e:
+            logging.exception(e)
+            print(e)
             pass
 
         # 3. Save tweets to S3

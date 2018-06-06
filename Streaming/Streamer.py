@@ -12,6 +12,7 @@ import io
 from datetime import datetime
 from dateutil import relativedelta
 from Manager import notify
+from TwitterRDS.RDSQueries import get_next_api_acct, insert_stream_log, finish_stream_log
 
 def getTweepyAuth(auth_name):
     with open('Streaming/twitter_user_config.json') as cfg:
@@ -180,7 +181,7 @@ def connect_s3():
     s3 = boto3.resource('s3')
     return s3
 
-def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_count=1000, auth_name='tom'):
+def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_count=1000):
     """
     1. Create the topic and stream
     2. Collects tweet_count tweets and save to a local file
@@ -197,8 +198,8 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         quit()
 
     # 2. Start Twitter stream running
-    logging.info("run_top_cont: Starting {0} stream for {1} tweets using auth({2}).".format(run_topic.name, tweet_count,auth_name))
-    print("Starting {0} stream for {1} tweets using auth({2}).".format(run_topic.name, tweet_count,auth_name))
+    logging.info("run_top_cont: Starting {0} stream for {1} tweets.".format(run_topic.name, tweet_count))
+    print("Starting {0} stream for {1} tweets.".format(run_topic.name, tweet_count))
     iteration = 0
 
     while True:
@@ -208,6 +209,15 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         if iteration == 0 and notify_us:
             notify.notify('Starting stream {}'.format(run_topic.name))
         iteration += 1
+        auth_name, auth_id = get_next_api_acct()
+        log_id = insert_stream_log( topic_id=run_topic.topic_id,
+                           tweet_count=tweet_count,
+                           api_acct=auth_id,
+                           con=None)
+        if log_id == -1:
+            logging.error("Could not log stream start.")
+            break
+
         run_stream = TwitterStream(name=run_topic.name, topic=run_topic, auth_name=auth_name)
 
         try:
@@ -223,7 +233,7 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         tweets = run_stream.myStreamListener.output.getvalue()
         object.put(Body=tweets)
         run_stream.myStreamListener.output.close()
-
+        finish_stream_log(log_id)
         duration = relativedelta.relativedelta(datetime.now(), start)
         msg = (strftime("%Y-%m-%d %H:%M:%S",gmtime()) +
               ": total_files({0}): duration({1} hours): Saving {2} to {3}."
@@ -234,5 +244,3 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
 
         if datetime.now().hour % 8 == 0 and notify_us and not notified:
             notify.notify('Still streaming {0}'.format(run_topic.name))
-
-

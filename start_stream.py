@@ -15,13 +15,14 @@ import logging
 import sys
 from Manager import notify
 from Streaming.Streamer import run_topic_continuous
+from TwitterRDS.RDSQueries import get_next_api_acct
 
 # Gather inputs from command line
 topic_id = sys.argv[1]
 s3_bucket = sys.argv[2]
 s3_path = sys.argv[3]
 tweet_count = int(sys.argv[4])
-auth_name = sys.argv[5]
+auth_name = get_next_api_acct()
 path_parts = s3_path.split("/")
 topic_name = path_parts[len(path_parts)-2].lower()
 log_name = "{}_stream.log".format(topic_name)
@@ -39,12 +40,12 @@ logging.basicConfig(filename=log_name,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
                     level=logging.INFO)
+
 try:
     run_topic_continuous(topic_id=topic_id,
                      s3_bucket=s3_bucket,
                      s3_path=s3_path,
-                     tweet_count=tweet_count,
-                     auth_name = auth_name)
+                     tweet_count=tweet_count)
 except Exception as e:
     logging.exception(e)
     notify.notify('{} stream failed in module start_stream.py'.format(topic_name))

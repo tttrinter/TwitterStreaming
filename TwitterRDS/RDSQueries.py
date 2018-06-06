@@ -601,3 +601,123 @@ def upsert_usernames(user_id, names, con=None):
 
     cur.execute(SQL)
     con.commit()
+
+
+def get_dehydrated_followers(minid=0, limit=10000, con=None):
+    """
+    Finds follower_ids from the user_followers table that do not have user records in the users table
+    :param minid: minimum twitter id - used to skip ahead in the list if necessary.
+    :param limit: int, limit of how many followers to pull
+    :param con: database connection
+    :return: list of twitter_ids needing user records
+    """
+    if con is None:
+        con = RDSconfig.get_connection()
+
+    SQL = """SELECT DISTINCT tf_follower_id, users.id 
+    FROM user_followers 
+    LEFT OUTER JOIN users ON tf_follower_id = users.id
+    WHERE users.id is NULL
+    AND tf_follower_id > {:d}
+    ORDER BY tf_follower_id
+    LIMIT {:d}""".format(minid, limit)
+
+    try:
+        id_df = pd.read_sql(SQL, con)
+    except Exception as e:
+        return e
+
+    if len(id_df) > 0:
+        return list(id_df['tf_follower_id'])
+    else:
+        return None
+
+
+def insert_stream_log(topic_id:int,
+                      tweet_count: int,
+                      api_acct: str,
+                      con=None):
+    """
+    Inserts record of a stream start and the the account used
+    Args:
+        :param topic_id: topic id from the topics table
+        :param tweet_count: number of tweets to gather before shutting down the stream
+        :param api_acct: name of the twitter api account used for the stream
+        :param con - database connection; default None, connection will be created
+        :return: hist_id id or, -1 if failed
+    """
+
+    if con is None:
+        con = RDSconfig.get_connection(source)
+    cur = con.cursor()
+
+    SQL = """ INSERT INTO stream_run_hist(
+                rh_tp_topic_id, 
+                rh_start_dt,
+                rh_tweet_count,  
+                rh_api_acct_id)
+            VALUES ({},'{}',{},{});""".format(
+        topic_id,
+        datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S'),
+        tweet_count,
+        api_acct)
+
+    try:
+        cur.execute(SQL)
+        con.commit()
+        return getidentity(cur, 'stream_run_hist', 'rh_run_hist_id')
+
+    except Exception as e:
+        print(e)
+        return -1
+
+
+def finish_stream_log(log_id:int, con=None):
+    """
+    Updates a stream log record with the finish time
+    Args:
+        :param log_id: stream log id from stream_run_hist
+    """
+
+    if con is None:
+        con = RDSconfig.get_connection(source)
+    cur = con.cursor()
+
+    SQL = """ UPDATE stream_run_hist 
+            SET rh_end_dt = '{}'
+            WHERE rh_run_hist_id = {};""".format(
+        datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S'),
+        log_id)
+
+    try:
+        cur.execute(SQL)
+        con.commit()
+
+    except Exception as e:
+        print(e)
+        return -1
+
+def get_next_api_acct(con=None):
+    """
+    :param con: database connection; one will be created if not provided
+    :return: the account from the list with the oldest start date in the stream_run_hist table, or first alphabetically
+    """
+    if con is None:
+        con = RDSconfig.get_connection()
+
+    SQL = """SELECT api_acct_id, tw_act_name, coalesce(max(rh_start_dt),'2000-01-01') last_run
+            FROM api_accts
+            LEFT OUTER JOIN stream_run_hist ON rh_api_acct_id=api_acct_id
+            GROUP BY api_acct_id, tw_act_name
+            ORDER BY last_run, tw_act_name
+            LIMIT 1"""
+
+    try:
+        api_df = pd.read_sql(SQL, con)
+    except Exception as e:
+        return e
+
+    if len(api_df) > 0:
+        return api_df.iloc[0]['tw_act_name'], api_df.iloc[0]['api_acct_id']
+    else:
+        return None

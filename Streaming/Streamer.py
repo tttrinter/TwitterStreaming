@@ -210,7 +210,7 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
             notify.notify('Starting stream {}'.format(run_topic.name))
         iteration += 1
         auth_name, auth_id = get_next_api_acct()
-        log_id = insert_stream_log( topic_id=run_topic.topic_id,
+        log_id = insert_stream_log(topic_id=run_topic.topic_id,
                            tweet_count=tweet_count,
                            api_acct=auth_id,
                            con=None)
@@ -235,7 +235,7 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         s3 = connect_s3()
         outfilename = run_topic.name + "_" + strftime("%Y%m%d%H%M%S", gmtime()) + ".json"
         key = s3_path + outfilename
-        object = s3.Object('di-thrivent', key)
+        object = s3.Object(s3_bucket, key)
         tweets = run_stream.myStreamListener.output.getvalue()
         object.put(Body=tweets)
         run_stream.myStreamListener.output.close()

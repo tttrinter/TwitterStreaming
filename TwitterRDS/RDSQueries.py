@@ -10,9 +10,10 @@ we've moved over to Postgres, SQLite development has stopped, so some of that co
 """
 
 # from datetime import datetime
+import pandas as pd
+import os  # used to capture computer name and pid for process mangement
 from TwitterFunctions import get_followers, parse_it
 from . import RDSconfig
-import pandas as pd
 from datetime import datetime
 
 # source='sqllite'
@@ -655,12 +656,16 @@ def insert_stream_log(topic_id:int,
                 rh_tp_topic_id, 
                 rh_start_dt,
                 rh_tweet_count,  
-                rh_api_acct_id)
-            VALUES ({},'{}',{},{});""".format(
+                rh_api_acct_id,
+                rh_computer_name, 
+                rh_pid)
+            VALUES ({},'{}',{},{},'{}',{});""".format(
         topic_id,
         datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S'),
         tweet_count,
-        api_acct)
+        api_acct,
+        os.environ['COMPUTERNAME'],
+        os.getpid())
 
     try:
         cur.execute(SQL)

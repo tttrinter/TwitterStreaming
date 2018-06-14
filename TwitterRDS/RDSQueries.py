@@ -726,3 +726,24 @@ def get_next_api_acct(con=None):
         return api_df.iloc[0]['tw_act_name'], api_df.iloc[0]['api_acct_id']
     else:
         return None
+
+
+def get_running_topics(con=None):
+    SQL = """SELECT tp_name, tp_id, tp_create_dt, rh_start_dt, rh_pid, rh_computer_name, rh_tweet_count
+            FROM topics 
+            LEFT OUTER JOIN stream_run_hist ON tp_id=rh_tp_topic_id
+            WHERE tp_on_off=TRUE
+            AND rh_end_dt IS NULL;"""
+
+    if con is None:
+        con = RDSconfig.get_connection()
+
+    try:
+        running_topics_df = pd.read_sql(SQL, con)
+    except Exception as e:
+        return e
+
+    if len(running_topics_df) > 0:
+        return running_topics_df
+    else:
+        return None

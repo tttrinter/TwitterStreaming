@@ -658,8 +658,9 @@ def insert_stream_log(topic_id:int,
                 rh_tweet_count,  
                 rh_api_acct_id,
                 rh_computer_name, 
-                rh_pid)
-            VALUES ({},'{}',{},{},'{}',{});""".format(
+                rh_pid, 
+                rh_status)
+            VALUES ({},'{}',{},{},'{}',{}, 'running');""".format(
         topic_id,
         datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S'),
         tweet_count,
@@ -689,7 +690,8 @@ def finish_stream_log(log_id:int, con=None):
     cur = con.cursor()
 
     SQL = """ UPDATE stream_run_hist 
-            SET rh_end_dt = '{}'
+            SET rh_end_dt = '{}', 
+            rh_status = 'finished'
             WHERE rh_run_hist_id = {};""".format(
         datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S'),
         log_id)
@@ -701,6 +703,37 @@ def finish_stream_log(log_id:int, con=None):
     except Exception as e:
         print(e)
         return -1
+
+
+def dead_stream_log(pid:int, comp: str, con=None):
+    """
+    Updates a stream log record with the finish time
+    Args:
+        :param pid: process id
+        :param comp: computer name
+    """
+
+    if con is None:
+        con = RDSconfig.get_connection(source)
+    cur = con.cursor()
+
+    SQL = """ UPDATE stream_run_hist 
+            SET rh_end_dt = '{}', 
+            rh_status = 'killed'
+            WHERE rh_pid = {} 
+            AND rh_computer = '{}';""".format(
+        datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S'),
+        pid,
+        comp)
+
+    try:
+        cur.execute(SQL)
+        con.commit()
+
+    except Exception as e:
+        print(e)
+        return -1
+
 
 def get_next_api_acct(con=None):
     """

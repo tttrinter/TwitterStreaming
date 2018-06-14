@@ -7,7 +7,7 @@ from time import sleep, gmtime, strftime
 import json
 import boto3
 import logging
-import os
+# import os
 import io
 from datetime import datetime
 from dateutil import relativedelta

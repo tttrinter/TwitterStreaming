@@ -6,16 +6,14 @@ from time import sleep
 from datetime import datetime
 import logging
 from subprocess import call
-from Streaming.Streamer import run_topic_continuous
 
-mp.set_start_method('spawn') # this will create new python processes when called
-
-from TwitterRDS import get_running_topics
+from TwitterRDS import get_running_topics, dead_stream_log
 
 # Set Constraints:
 max_runtime = 8*60 # if the process runs longer than this time in minutes, kill and restart
 min_memory_delta = 100 # if the memory doesn't change by this minimum amount in kbytes, kill and restart
 check_interval = 1 * 60 # how frequently to check the processes in search of hanging streams
+comp_name = os.environ['COMPUTERNAME']
 
 def kill_processes(pid_list):
     for pid in pid_list:
@@ -96,11 +94,11 @@ while True:
     pids_to_kill = []
 
     # min memory increment
-    stalled = comp_df.loc[comp_df['mem_delta']<min_memory_delta]['rh_pid'].tolist()
+    stalled = comp_df.loc[(comp_df['mem_delta']<min_memory_delta) and (comp_df['rh_computer_name']==comp_name)]['rh_pid'].tolist()
     pids_to_kill.extend(stalled)
 
     # running too long
-    timedout = comp_df.loc[comp_df['run_time']<max_runtime]['rh_pid'].tolist()
+    timedout = comp_df.loc[(comp_df['run_time']<max_runtime) and (comp_df['rh_computer_name']==comp_name)]['rh_pid'].tolist()
     pids_to_kill.extend(timedout)
 
     # kill processes
@@ -116,6 +114,7 @@ while True:
                 's3_bucket': 'di-thrivent',
                 's3_path': s3_path,
                 'tweet_count': tweet_count}
+        dead_stream_log(pid, comp_name)
         restart_stream(run_inputs)
 
 

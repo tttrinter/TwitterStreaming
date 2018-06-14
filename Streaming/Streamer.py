@@ -223,8 +223,8 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         try:
             run_stream.startStream(tweet_count=tweet_count, async=True)
 
-        # except AttributeError:
-        #     pass
+        except AttributeError:
+            pass
 
         except Exception as e:
             logging.exception(e)

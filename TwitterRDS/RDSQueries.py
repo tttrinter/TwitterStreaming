@@ -721,7 +721,7 @@ def dead_stream_log(pid:int, comp: str, con=None):
             SET rh_end_dt = '{}', 
             rh_status = 'killed'
             WHERE rh_pid = {} 
-            AND rh_computer = '{}';""".format(
+            AND rh_computer_name = '{}';""".format(
         datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S'),
         pid,
         comp)
@@ -761,12 +761,38 @@ def get_next_api_acct(con=None):
         return None
 
 
+def get_topics_settorun(con=None):
+    SQL = """SELECT tp_name, 
+                tp_id, 
+                tp_create_dt, 
+                Null as rh_start_dt, 
+                Null as rh_pid, 
+                Null as rh_computer_name, 
+                5000 as rh_tweet_count
+                FROM topics 
+                WHERE tp_on_off=TRUE
+                ORDER BY tp_name"""
+
+    if con is None:
+        con = RDSconfig.get_connection()
+
+    try:
+        settorun_df = pd.read_sql(SQL, con)
+    except Exception as e:
+        return e
+
+    if len(settorun_df ) > 0:
+        return settorun_df
+    else:
+        return None
+
+
 def get_running_topics(con=None):
     SQL = """SELECT tp_name, tp_id, tp_create_dt, rh_start_dt, rh_pid, rh_computer_name, rh_tweet_count
-            FROM topics 
-            LEFT OUTER JOIN stream_run_hist ON tp_id=rh_tp_topic_id
+            FROM stream_run_hist
+            INNER JOIN topics ON tp_id=rh_tp_topic_id
             WHERE tp_on_off=TRUE
-            AND rh_end_dt IS NULL;"""
+            AND rh_end_dt IS NULL"""
 
     if con is None:
         con = RDSconfig.get_connection()

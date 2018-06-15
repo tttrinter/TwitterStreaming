@@ -5,19 +5,21 @@ import pandas as pd
 from time import sleep
 from datetime import datetime
 import logging
-from subprocess import call
-
-from TwitterRDS import get_running_topics, dead_stream_log
+from subprocess import Popen
+from TwitterRDS.RDSQueries import get_running_topics, dead_stream_log, get_topics_settorun
 
 # Set Constraints:
 max_runtime = 8*60 # if the process runs longer than this time in minutes, kill and restart
 min_memory_delta = 100 # if the memory doesn't change by this minimum amount in kbytes, kill and restart
 check_interval = 1 * 60 # how frequently to check the processes in search of hanging streams
 comp_name = os.environ['COMPUTERNAME']
+t1_df = None
+t2_df = None
 
 def kill_processes(pid_list):
     for pid in pid_list:
-        os.system("taskkill /f /pid {}".format(pid))
+        os.system("taskkill /f /pid {}".format(int(pid)))
+
 
 def check_tasks():
     # set fixed column width format for task list reading
@@ -41,7 +43,8 @@ def check_tasks():
 
     # convert mem-usage to value
     tasks_df['mem_usage_val'] = [int(re.sub(',', '', x[:-2])) for x in tasks_df['mem_usage']]
-    tasks_df.loc[tasks_df.image_name == 'python.exe'].sort_values(['pid'])
+    tasks_df['pid'] = tasks_df['pid'].astype('int')
+    tasks_df = tasks_df.loc[tasks_df.image_name == 'python.exe'].sort_values(['pid'])
 
     return tasks_df
 
@@ -59,47 +62,86 @@ def compare_timepoints(topic_df, t1_df, t2_df):
     comp_df.drop(['pid_x', 'pid_y'], axis=1, inplace=True)
 
     # calculate constraints
-    comp_df['mem_delta'] = comp_df['mem2'] - comp_df['mem1']
+    comp_df.fillna(0, inplace=True)
+    # create and initialize run_time column
+    comp_df['run_time'] = 0
+    # where there is a real start date, use it to calculate run_time
     comp_df['run_time'] = [(datetime.now() - x).total_seconds() / 60 for x in comp_df['rh_start_dt']]
+    # evaluate the incremental memory used since last check - to see if the t
+    comp_df['mem_delta'] = comp_df['mem2'] - comp_df['mem1']
+
+
 
     return comp_df
 
 
 def restart_stream(inputs):
+    my_env = os.environ.copy()
+    DETACHED_PROCESS = 0x00000008
     call_line = 'python start_stream.py {} "{}" "{}" {}'.format(
         inputs['topic_id'],
         inputs['s3_bucket'],
         inputs['s3_path'],
         inputs['tweet_count']
     )
-    call(call_line)
+    Popen(call_line, shell=True, creationflags=DETACHED_PROCESS, env=my_env)
+    # Popen(call_line, shell=True)
 
+
+# Set up log
+logging.basicConfig(filename='watchdog.log',
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    datefmt='%m/%d/%Y %I:%M:%S %p',
+                    level=logging.INFO)
+
+logging.info("Starting watchdog.")
 while True:
-    # get topic data
-    topic_df = get_running_topics()
-    # get starting task_manager reference data
-    if t1_df is None:
-        if t2_df is None:
-            t1_df = check_tasks()
-        else:
-            t1_df = check_tasks()
+    # topics set to run
+    set_df = get_topics_settorun()
 
+    # topics running or stalled
+    running_df = get_running_topics()
+
+    # start any streams not already running
+    if running_df is not None:
+        topics_to_start = list(set(set_df.tp_id) - set(running_df.tp_id))
+    else:
+        topics_to_start = list(list(set_df.tp_id.unique()))
+
+    for tp_id in topics_to_start:
+        row = set_df.loc[set_df.tp_id==tp_id].iloc[0]
+        tweet_count = row['rh_tweet_count']
+        s3_path = 'twitter/Life Events/{}/'.format(row['tp_name'])
+        run_inputs = {'topic_id': tp_id,
+                      's3_bucket': 'di-thrivent',
+                      's3_path': s3_path,
+                      'tweet_count': tweet_count}
+        restart_stream(run_inputs)
+        # sleeping for 20 seconds so that it has time to update the user before starting a new stream
+        sleep(20)
+
+    # refresh running_df - should have these newly added streams
+    running_df = get_running_topics()
+
+    # status of running topics
+    t1_df = check_tasks()
     sleep(check_interval)
-    t2_df = get_running_topics()
+    t2_df = check_tasks()
 
     #compare data
-    comp_df = compare_timepoints(topic_df, t1_df, t2_df)
+    comp_df = compare_timepoints(running_df, t1_df, t2_df)
 
     # check constraints
     pids_to_kill = []
 
     # min memory increment
-    stalled = comp_df.loc[(comp_df['mem_delta']<min_memory_delta) and (comp_df['rh_computer_name']==comp_name)]['rh_pid'].tolist()
+    stalled = comp_df.loc[(comp_df['mem_delta'] < min_memory_delta) & (str(comp_df['rh_computer_name']) == comp_name)]['rh_pid'].tolist()
     pids_to_kill.extend(stalled)
 
     # running too long
-    timedout = comp_df.loc[(comp_df['run_time']<max_runtime) and (comp_df['rh_computer_name']==comp_name)]['rh_pid'].tolist()
+    timedout = comp_df.loc[(comp_df['run_time']>max_runtime) & (comp_df['rh_computer_name']==comp_name)]['rh_pid'].tolist()
     pids_to_kill.extend(timedout)
+    pids_to_kill = list(set(pids_to_kill))
 
     # kill processes
     kill_processes(pids_to_kill)
@@ -116,7 +158,6 @@ while True:
                 'tweet_count': tweet_count}
         dead_stream_log(pid, comp_name)
         restart_stream(run_inputs)
-
 
 
 

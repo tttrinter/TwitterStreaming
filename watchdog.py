@@ -11,7 +11,7 @@ from TwitterRDS.RDSQueries import get_running_topics, dead_stream_log, get_topic
 # Set Constraints:
 max_runtime = 8*60 # if the process runs longer than this time in minutes, kill and restart
 min_memory_delta = 100 # if the memory doesn't change by this minimum amount in kbytes, kill and restart
-check_interval = 1 * 60 # how frequently to check the processes in search of hanging streams
+check_interval = 5 * 60 # how frequently to check the processes in search of hanging streams
 comp_name = os.environ['COMPUTERNAME']
 t1_df = None
 t2_df = None

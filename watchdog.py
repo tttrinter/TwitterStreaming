@@ -70,8 +70,6 @@ def compare_timepoints(topic_df, t1_df, t2_df):
     # evaluate the incremental memory used since last check - to see if the t
     comp_df['mem_delta'] = comp_df['mem2'] - comp_df['mem1']
 
-
-
     return comp_df
 
 
@@ -86,7 +84,6 @@ def restart_stream(inputs):
     )
     Popen(call_line, shell=True, creationflags=DETACHED_PROCESS, env=my_env)
     # Popen(call_line, shell=True)
-
 
 # Set up log
 logging.basicConfig(filename='watchdog.log',
@@ -158,6 +155,8 @@ while True:
                 'tweet_count': tweet_count}
         dead_stream_log(pid, comp_name)
         restart_stream(run_inputs)
+        # sleeping for 20 seconds so that it has time to update the user before starting a new stream
+        sleep(20)
 
 
 

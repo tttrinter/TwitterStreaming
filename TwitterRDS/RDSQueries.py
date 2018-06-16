@@ -721,7 +721,8 @@ def dead_stream_log(pid:int, comp: str, con=None):
             SET rh_end_dt = '{}', 
             rh_status = 'killed'
             WHERE rh_pid = {} 
-            AND rh_computer_name = '{}';""".format(
+            AND rh_computer_name = '{}'
+            AND rh_status='running';""".format(
         datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S'),
         pid,
         comp)

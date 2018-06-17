@@ -747,6 +747,7 @@ def get_next_api_acct(con=None):
     SQL = """SELECT api_acct_id, tw_act_name, coalesce(max(rh_start_dt),'2000-01-01') last_run
             FROM api_accts
             LEFT OUTER JOIN stream_run_hist ON rh_api_acct_id=api_acct_id
+            WHERE tw_status=true
             GROUP BY api_acct_id, tw_act_name
             ORDER BY last_run, tw_act_name
             LIMIT 1"""

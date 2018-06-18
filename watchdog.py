@@ -6,7 +6,7 @@ from time import sleep
 from datetime import datetime
 import logging
 from subprocess import Popen
-from TwitterRDS.RDSQueries import get_running_topics, dead_stream_log, get_topics_settorun
+from TwitterRDS.RDSQueries import get_running_topics, dead_stream_log, get_topic_rundata, dead_stream_log_bytopic
 
 # Set Constraints:
 max_runtime = 8*60 # if the process runs longer than this time in minutes, kill and restart
@@ -94,16 +94,16 @@ logging.basicConfig(filename='watchdog.log',
 logging.info("Starting watchdog.")
 while True:
     # topics set to run
-    set_df = get_topics_settorun()
+    set_df = get_topic_rundata()
 
     # topics running or stalled
     running_df = get_running_topics()
 
     # start any streams not already running
     if running_df is not None:
-        topics_to_start = list(set(set_df.tp_id) - set(running_df.tp_id))
+        topics_to_start = list(set(set_df.loc[set_df['tp_on_off']==True]['tp_id']) - set(running_df.tp_id))
     else:
-        topics_to_start = list(list(set_df.tp_id.unique()))
+        topics_to_start = list(set_df.loc[set_df['tp_on_off']==True]['tp_id'])
 
     for tp_id in topics_to_start:
         row = set_df.loc[set_df.tp_id==tp_id].iloc[0]
@@ -119,6 +119,13 @@ while True:
 
     # refresh running_df - should have these newly added streams
     running_df = get_running_topics()
+
+    # kill any topics running that are NOT set to run
+    topics_to_stop = list(set(set_df.loc[set_df['tp_on_off'] == False]['tp_id']) & set(running_df.tp_id))
+    if len(topics_to_stop) > 0:
+        kill_processes(topics_to_stop)
+        for tpid in topics_to_stop:
+            dead_stream_log_bytopic(tpid, comp_name)
 
     # status of running topics
     t1_df = check_tasks()

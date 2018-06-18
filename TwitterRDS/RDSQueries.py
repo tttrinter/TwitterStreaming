@@ -736,6 +736,37 @@ def dead_stream_log(pid:int, comp: str, con=None):
         return -1
 
 
+def dead_stream_log_bytopic(tp_id:int, comp: str, con=None):
+    """
+    Updates a stream log record with the finish time
+    Args:
+        :param tp_id: topic id
+        :param comp: computer name
+    """
+
+    if con is None:
+        con = RDSconfig.get_connection(source)
+    cur = con.cursor()
+
+    SQL = """UPDATE stream_run_hist 
+            SET rh_end_dt = '{}', 
+            rh_status = 'killed'
+            WHERE rh_tp_topic_id = {} 
+            AND rh_computer_name = '{}'
+            AND rh_status='running';""".format(
+        datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M:%S'),
+        tp_id,
+        comp)
+
+    try:
+        cur.execute(SQL)
+        con.commit()
+
+    except Exception as e:
+        print(e)
+        return -1
+
+
 def get_next_api_acct(con=None):
     """
     :param con: database connection; one will be created if not provided
@@ -763,17 +794,17 @@ def get_next_api_acct(con=None):
         return None
 
 
-def get_topics_settorun(con=None):
+def get_topic_rundata(con=None):
     SQL = """SELECT tp_name, 
-                tp_id, 
-                tp_create_dt, 
-                Null as rh_start_dt, 
-                Null as rh_pid, 
-                Null as rh_computer_name, 
-                5000 as rh_tweet_count
-                FROM topics 
-                WHERE tp_on_off=TRUE
-                ORDER BY tp_name"""
+            tp_id, 
+            tp_create_dt, 
+            coalesce(tp_on_off, false) tp_on_off, 
+            Null as rh_start_dt, 
+            Null as rh_pid, 
+            Null as rh_computer_name, 
+            5000 as rh_tweet_count
+            FROM topics 
+            ORDER BY tp_name;"""
 
     if con is None:
         con = RDSconfig.get_connection()

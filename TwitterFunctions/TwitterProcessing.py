@@ -114,6 +114,8 @@ def find_state_abrv(loc):
 
 def find_long_state(loc):
     foundstate = ""
+    if loc is None:
+        return ""
 
     # look for 2 letter state abbreviation
     state_abrv = find_state_abrv(loc)

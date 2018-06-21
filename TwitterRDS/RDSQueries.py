@@ -572,7 +572,7 @@ def upsert_usernames(user_id, names, con=None):
 
     if con is None:
         con = RDSconfig.get_connection()
-        cur = con.cursor()
+    cur = con.cursor()
     uid = check_for_usernames(user_id, con)
 
     if uid > 0:

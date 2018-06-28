@@ -15,6 +15,7 @@ check_interval = 5 * 60 # how frequently to check the processes in search of han
 comp_name = os.environ['COMPUTERNAME']
 t1_df = None
 t2_df = None
+STREAM_LIMIT = 3
 
 def kill_processes(pid_list):
     for pid in pid_list:
@@ -48,6 +49,24 @@ def check_tasks():
 
     return tasks_df
 
+
+def check_running(set_df):
+    # topics running or stalled
+    running_df = get_running_topics()
+    # Each stream seems to use 25% CPU. We'll limit the number of streams running per CPU to 3
+    running_this_computer = len(running_df.loc[running_df.rh_computer_name == comp_name])
+
+    # Topics to Start
+    if running_df is not None:
+        topics_to_start = list(set(set_df.loc[set_df['tp_on_off']==True]['tp_id']) - set(running_df.tp_id))
+    else:
+        topics_to_start = list(set_df.loc[set_df['tp_on_off']==True]['tp_id'])
+
+    # Topics to Stop - on this computer ONLY
+    topics_to_stop = list(set(set_df.loc[set_df['tp_on_off'] == False]['tp_id']) &
+                          set(running_df.loc[running_df.rh_computer_name == comp_name, 'tp_id']))
+
+    return running_df, running_this_computer, topics_to_start, topics_to_stop
 
 def compare_timepoints(topic_df, t1_df, t2_df):
     # merge with start values
@@ -97,15 +116,16 @@ while True:
     set_df = get_topic_rundata()
 
     # topics running or stalled
-    running_df = get_running_topics()
-
+    running_df, running_this_computer, topics_to_start, topics_to_stop = check_running(set_df)
     # start any streams not already running
-    if running_df is not None:
-        topics_to_start = list(set(set_df.loc[set_df['tp_on_off']==True]['tp_id']) - set(running_df.tp_id))
-    else:
-        topics_to_start = list(set_df.loc[set_df['tp_on_off']==True]['tp_id'])
+    # if running_df is not None:
+    #     topics_to_start = list(set(set_df.loc[set_df['tp_on_off']==True]['tp_id']) - set(running_df.tp_id))
+    # else:
+    #     topics_to_start = list(set_df.loc[set_df['tp_on_off']==True]['tp_id'])
 
-    for tp_id in topics_to_start:
+    # for tp_id in topics_to_start:
+    while (len(topics_to_start) > 0 and running_this_computer < STREAM_LIMIT) :
+        tp_id = topics_to_start[0] # get the first in the list (list is updated at end of this loop)
         row = set_df.loc[set_df.tp_id==tp_id].iloc[0]
         tweet_count = row['rh_tweet_count']
         s3_path = 'twitter/Life Events/{}/'.format(row['tp_name'])
@@ -117,11 +137,10 @@ while True:
         # sleeping for 20 seconds so that it has time to update the user before starting a new stream
         sleep(20)
 
-    # refresh running_df - should have these newly added streams
-    running_df = get_running_topics()
+        # Update run data to pick up new starts/stops
+        running_df, running_this_computer, topics_to_start, topics_to_stop = check_running(set_df)
 
     # kill any topics running that are NOT set to run
-    topics_to_stop = list(set(set_df.loc[set_df['tp_on_off'] == False]['tp_id']) & set(running_df.tp_id))
     if len(topics_to_stop) > 0:
         kill_processes(topics_to_stop)
         for tpid in topics_to_stop:

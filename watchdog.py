@@ -110,6 +110,7 @@ logging.basicConfig(filename='watchdog.log',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
                     level=logging.INFO)
 
+# RUN WATCHDOG
 logging.info("Starting watchdog.")
 while True:
     # topics set to run

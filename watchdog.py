@@ -53,18 +53,21 @@ def check_tasks():
 def check_running(set_df):
     # topics running or stalled
     running_df = get_running_topics()
-    # Each stream seems to use 25% CPU. We'll limit the number of streams running per CPU to 3
-    running_this_computer = len(running_df.loc[running_df.rh_computer_name == comp_name])
 
     # Topics to Start
     if running_df is not None:
+        # Each stream seems to use 25% CPU. We'll limit the number of streams running per CPU to 3
+        running_this_computer = len(running_df.loc[running_df.rh_computer_name == comp_name])
         topics_to_start = list(set(set_df.loc[set_df['tp_on_off']==True]['tp_id']) - set(running_df.tp_id))
+
+        # Topics to Stop - on this computer ONLY
+        topics_to_stop = list(set(set_df.loc[set_df['tp_on_off'] == False]['tp_id']) &
+                              set(running_df.loc[running_df.rh_computer_name == comp_name, 'tp_id']))
+
     else:
         topics_to_start = list(set_df.loc[set_df['tp_on_off']==True]['tp_id'])
-
-    # Topics to Stop - on this computer ONLY
-    topics_to_stop = list(set(set_df.loc[set_df['tp_on_off'] == False]['tp_id']) &
-                          set(running_df.loc[running_df.rh_computer_name == comp_name, 'tp_id']))
+        running_this_computer = 0
+        topics_to_stop = []
 
     return running_df, running_this_computer, topics_to_start, topics_to_stop
 
@@ -118,13 +121,19 @@ while True:
 
     # topics running or stalled
     running_df, running_this_computer, topics_to_start, topics_to_stop = check_running(set_df)
-    # start any streams not already running
-    # if running_df is not None:
-    #     topics_to_start = list(set(set_df.loc[set_df['tp_on_off']==True]['tp_id']) - set(running_df.tp_id))
-    # else:
-    #     topics_to_start = list(set_df.loc[set_df['tp_on_off']==True]['tp_id'])
 
-    # for tp_id in topics_to_start:
+    # check for orphaned tasks - these show as "running" in the DB, but don't exist in the task manager
+    t1_df = check_tasks()
+    if running_df is not None:
+        orphan_list = list(set(running_df.loc[running_df['rh_computer_name'] == comp_name,'rh_pid']) - set(t1_df['pid']))
+        for orphan in orphan_list:
+            dead_stream_log(orphan, comp_name)
+
+        #update stats for any orphaned streams
+        sleep(10)
+        running_df, running_this_computer, topics_to_start, topics_to_stop = check_running(set_df)
+
+    # start the next stream if the stream-limit isn't exceded
     while (len(topics_to_start) > 0 and running_this_computer < STREAM_LIMIT) :
         tp_id = topics_to_start[0] # get the first in the list (list is updated at end of this loop)
         row = set_df.loc[set_df.tp_id==tp_id].iloc[0]
@@ -135,8 +144,8 @@ while True:
                       's3_path': s3_path,
                       'tweet_count': tweet_count}
         restart_stream(run_inputs)
-        # sleeping for 20 seconds so that it has time to update the user before starting a new stream
-        sleep(20)
+        # sleeping for 10 seconds so that it has time to update the user before starting a new stream
+        sleep(10)
 
         # Update run data to pick up new starts/stops
         running_df, running_this_computer, topics_to_start, topics_to_stop = check_running(set_df)

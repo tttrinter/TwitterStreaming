@@ -75,12 +75,12 @@ from Streaming.ProcessTweets import process_s3_files
 #
 # Prepare the vectorizer - this is what extracts the vocabulary terms from the tweets
 # creating the custom, stemmed count vectorizer
-english_stemmer = SnowballStemmer('english')
-
-class StemmedCountVectorizer(CountVectorizer):
-    def build_analyzer(self):
-        analyzer = super(StemmedCountVectorizer, self).build_analyzer()
-        return lambda doc: ([english_stemmer.stem(w) for w in analyzer(doc)])
+# english_stemmer = SnowballStemmer('english')
+#
+# class StemmedCountVectorizer(CountVectorizer):
+#     def build_analyzer(self):
+#         analyzer = super(StemmedCountVectorizer, self).build_analyzer()
+#         return lambda doc: ([english_stemmer.stem(w) for w in analyzer(doc)])
 #
 # # Test running multiple models on a tweet file:
 # tweet_df = run_topic_models(infile=infile, topic= new_topic)
@@ -89,5 +89,5 @@ class StemmedCountVectorizer(CountVectorizer):
 # tweet_df.to_excel("classified_grad_tweets.xlsx")
 # stream_to_S3(topic_id=9,s3bucket='aqtwitter',s3path='tweets/Life Events/Graduation', tweet_count=100000)
 
-process_s3_files(topic_id=1 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Graduation/', threshold=0.5)
-process_s3_files(topic_id=2 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Birth/', threshold=0.5)
+# process_s3_files(topic_id=1 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Graduation/', threshold=0.5)
+# process_s3_files(topic_id=2 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Birth/', threshold=0.5)

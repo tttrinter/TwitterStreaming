@@ -104,8 +104,12 @@ def restart_stream(inputs):
         inputs['s3_path'],
         inputs['tweet_count']
     )
-    Popen(call_line, shell=True, creationflags=DETACHED_PROCESS, env=my_env)
-    # Popen(call_line, shell=True)
+    try:
+        Popen(call_line, shell=True, creationflags=DETACHED_PROCESS, env=my_env)
+
+    except Exception as e:
+        print(e)
+        logging.error(e)
 
 # Set up log
 logging.basicConfig(filename='watchdog.log',

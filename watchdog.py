@@ -148,8 +148,8 @@ while True:
                       's3_path': s3_path,
                       'tweet_count': tweet_count}
         restart_stream(run_inputs)
-        # sleeping for 10 seconds so that it has time to update the user before starting a new stream
-        sleep(10)
+        # sleeping for 30 seconds so that it has time to update the user before starting a new stream
+        sleep(30)
 
         # Update run data to pick up new starts/stops
         running_df, running_this_computer, topics_to_start, topics_to_stop = check_running(set_df)
@@ -195,8 +195,8 @@ while True:
                 'tweet_count': tweet_count}
         dead_stream_log(pid, comp_name)
         restart_stream(run_inputs)
-        # sleeping for 20 seconds so that it has time to update the user before starting a new stream
-        sleep(20)
+        # sleeping for 20 seconds so that it has time to update the DB before starting a new stream
+        sleep(30)
 
 
 

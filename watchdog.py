@@ -144,10 +144,8 @@ while True:
         sleep(30)
         running_df, running_this_computer, topics_to_start, topics_to_stop = check_running(set_df)
 
-
-
     # start the next stream if the stream-limit isn't exceded
-    while (len(topics_to_start) > 0 and running_this_computer < STREAM_LIMIT) :
+    while (len(topics_to_start) > 0 and running_this_computer < STREAM_LIMIT):
         tp_id = topics_to_start[0] # get the first in the list (list is updated at end of this loop)
         row = set_df.loc[set_df.tp_id==tp_id].iloc[0]
         tweet_count = row['rh_tweet_count']
@@ -194,21 +192,8 @@ while True:
     # kill processes
     kill_processes(pids_to_kill)
 
-    # restart streams
-    for pid in pids_to_kill:
-        row = comp_df.loc[comp_df['rh_pid'] == pid].iloc[0]
-        tp_id = row['tp_id']
-        tweet_count = row['rh_tweet_count']
-        s3_path = 'twitter/Life Events/{}/'.format(row['tp_name'])
-        run_inputs = {'topic_id': tp_id,
-                's3_bucket': 'di-thrivent',
-                's3_path': s3_path,
-                'tweet_count': tweet_count}
-        dead_stream_log(pid, comp_name)
-        restart_stream(run_inputs)
-        # sleeping for 20 seconds so that it has time to update the DB before starting a new stream
-        sleep(30)
-
+    # sleeping for 30 seconds so that it has time to update the user before starting a new stream
+    sleep(30)
 
 
 

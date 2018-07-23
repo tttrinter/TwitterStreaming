@@ -64,6 +64,13 @@ def check_running(set_df):
         topics_to_stop = list(set(set_df.loc[set_df['tp_on_off'] == False]['tp_id']) &
                               set(running_df.loc[running_df.rh_computer_name == comp_name, 'tp_id']))
 
+        # Duplicate tasks - a topic should only be running once across all machines
+        # where there are dupes, we'll kill all of the processes and let them re-start the stream on the machine that first
+        # gets to it with capacity.
+        topic_counts = running_df['tp_id'].value_counts()
+        dupe_list = list(topic_counts[topic_counts > 1].keys())
+        topics_to_stop.extend(dupe_list)
+
     else:
         topics_to_start = list(set_df.loc[set_df['tp_on_off']==True]['tp_id'])
         running_this_computer = 0
@@ -134,8 +141,10 @@ while True:
             dead_stream_log(orphan, comp_name)
 
         #update stats for any orphaned streams
-        sleep(10)
+        sleep(30)
         running_df, running_this_computer, topics_to_start, topics_to_stop = check_running(set_df)
+
+
 
     # start the next stream if the stream-limit isn't exceded
     while (len(topics_to_start) > 0 and running_this_computer < STREAM_LIMIT) :
@@ -156,9 +165,11 @@ while True:
 
     # kill any topics running that are NOT set to run
     if len(topics_to_stop) > 0:
-        kill_processes(topics_to_stop)
-        for tpid in topics_to_stop:
-            dead_stream_log_bytopic(tpid, comp_name)
+        pids_to_kill = running_df.loc[(running_df['tp_id'].isin(topics_to_stop) and
+                                       (running_df['rh_computer_name']==comp_name))]['rh_pid'].tolist()
+        kill_processes(pids_to_kill)
+        for pid in pids_to_kill:
+            dead_stream_log(pid, comp_name)
 
     # status of running topics
     t1_df = check_tasks()
@@ -172,11 +183,11 @@ while True:
     pids_to_kill = []
 
     # min memory increment
-    stalled = comp_df.loc[(comp_df['mem_delta'] < min_memory_delta) & (str(comp_df['rh_computer_name']) == comp_name)]['rh_pid'].tolist()
+    stalled = comp_df.loc[(comp_df['mem_delta'] < min_memory_delta) and (str(comp_df['rh_computer_name']) == comp_name)]['rh_pid'].tolist()
     pids_to_kill.extend(stalled)
 
     # running too long
-    timedout = comp_df.loc[(comp_df['run_time']>max_runtime) & (comp_df['rh_computer_name']==comp_name)]['rh_pid'].tolist()
+    timedout = comp_df.loc[(comp_df['run_time']>max_runtime) and (comp_df['rh_computer_name']==comp_name)]['rh_pid'].tolist()
     pids_to_kill.extend(timedout)
     pids_to_kill = list(set(pids_to_kill))
 

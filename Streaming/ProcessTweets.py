@@ -27,19 +27,20 @@ from nltk.stem import SnowballStemmer
 # import numpy as np
 
 
-def get_processed_key(file_key: str):
+def get_processed_key(file_key: str, dest):
     """ Takes an S3 file key and splits it by "/" for use in building
         save and delete steps as the files are processed.
 
         Args:
             file_key: string, this is the full file name from S3 for a saved file
+            dest: where the file is going - "Processed", or "Failed"
 
         Returns:
             List of terms that make up the S3 path, dropping the bucket name.
         """
 
     path_pieces = file_key.split('/')
-    path_pieces.insert(len(path_pieces) - 2, 'Processed')
+    path_pieces.insert(len(path_pieces) - 2, dest)
     processed_key = ''
     for piece in path_pieces:
         processed_key += "/" + piece
@@ -47,13 +48,16 @@ def get_processed_key(file_key: str):
     return processed_key[1:]
 
 
-def tweet_text_from_file(infile: str, startline=0, endline=9000000, exclusions = []):
+def tweet_text_from_file(infile: str, startline=0, endline=9000000, filters=[], exclusions=[]):
+# def tweet_text_from_file(infile: str, startline=0, endline=9000000, exclusions=[]):
     """ Reads in a json tweet file and extracts the tweet ids and text.
 
         Args:
             infile: str, directory and file name for the .json tweet file
             startline: int, optional start line in the file. Process will skip forward to this line. Default = 0.
             endline: int, optional end line in the file. Process will stop when it gets to this line. Default 9MM.
+            filters: list of filter terms - from the topic; since Tweepy isn't filtering everything, reapply here
+            exclusions: list of exclusion terms - also from the topic
 
         Returns:
             pandas DataFrame with two columns: tweet_id, text
@@ -68,8 +72,11 @@ def tweet_text_from_file(infile: str, startline=0, endline=9000000, exclusions =
                 tweet_dict = json.loads(line)
                 try:
                     tweet_text = tweet_dict['text']
+                    # Reject if the filter terms aren't found
+                    filter_count = len([x for x in filters if x in tweet_text])
                     exclusion_count = len([x for x in exclusions if x in tweet_text])
-                    if exclusion_count == 0:
+                    if exclusion_count == 0 and filter_count > 0:
+                    # if exclusion_count == 0:
                         tweets.append({k: tweet_dict.get(k, None) for k in tweet_keys})
                 except Exception as e:
                     logging.exception(e)
@@ -78,13 +85,17 @@ def tweet_text_from_file(infile: str, startline=0, endline=9000000, exclusions =
                 break
     f.close()
 
-    tweet_df = pd.DataFrame.from_dict(tweets)
-    tweet_df.columns = ['tweet_id', 'text']
-    tweet_df.drop_duplicates(subset='text', keep='first',inplace=True)
+    if len(tweets) > 0:
+        tweet_df = pd.DataFrame.from_dict(tweets)
+        tweet_df.columns = ['tweet_id', 'text']
+        tweet_df.drop_duplicates(subset='text', keep='first',inplace=True)
 
     # Clean the text column, removing hyper links, punctuation, and non ascii chars.
-    tweet_df = clean_text_col(tweet_df, 'text', 'clean_text', False )
-    tweet_df = clean_text_col(tweet_df, 'text', 'clean_text_list', True )
+        tweet_df = clean_text_col(tweet_df, 'text', 'clean_text', False )
+        tweet_df = clean_text_col(tweet_df, 'text', 'clean_text_list', True )
+    else:
+        tweet_df = None
+
     return tweet_df
 
 
@@ -141,22 +152,23 @@ def run_topic_models(infile: str, topic: Topic, startline=0, endline=9000000):
         Each model appends a column to the tweet_df named after the model name.
     """
 
+    # tweet_df = tweet_text_from_file(infile, filters=topic.filters, exclusions=topic.exclusions)
     tweet_df = tweet_text_from_file(infile, exclusions=topic.exclusions)
-    for model in topic.models_list:
-        msg = "Running {}: {} model.".format(topic.name, model.name)
-        logging.info(msg)
-        print(msg)
-        try:
+    if tweet_df is not None:
+        for model in topic.models_list:
+            msg = "Running {}: {} model.".format(topic.name, model.name)
+            logging.info(msg)
+            print(msg)
             tweet_df = classify_tweets(tweet_df=tweet_df,
                                        pickled_model=model.model_path+model.filename,
                                        pickled_vectorizer=model.model_path+model.vectorizer,
                                        model_var=model.name,
                                        model_type=model.type)
-        except Exception as e:
-            logging.exception(e)
-            return
-
-    return tweet_df
+            # except Exception as e:
+            #     logging.exception(e)
+            #     raise.Exception
+            #     return
+        return tweet_df
 
 
 def save_classified_tweets(infile: str, tweet_df: pd.DataFrame, topic: Topic, threshold=0.5, con=None):
@@ -216,6 +228,43 @@ def save_classified_tweets(infile: str, tweet_df: pd.DataFrame, topic: Topic, th
     f.close()
 
 
+def move_s3_file(s3bucket, file_key, dest):
+   """Move an S3 file to a new location and delete from the current.
+
+       Args:
+        s3: s3 connection
+        s3bucket: str, s3 bucket name
+        file_key: str, name of the file to move
+        proc_key: str, name of file after moving
+        dest: str, destination folder in S3
+
+    Returns:
+        None
+    """
+   proc_key = get_processed_key(file_key, dest)
+   print("Copying to: {}".format(proc_key))
+   copy_source = {
+       'Bucket': s3bucket,
+       'Key': file_key
+   }
+
+   boto3.setup_default_session(profile_name='di')
+   s3 = boto3.client('s3')
+
+   try:
+       response = s3.copy(copy_source, s3bucket, proc_key)
+       print("Deleting: {}".format(file_key))
+       client = boto3.client('s3')
+       response = s3.delete_object(
+           Bucket=s3bucket,
+           Key=file_key)
+   except Exception as e:
+       logging.error(e)
+
+   # Delete File
+
+
+
 def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, threshold=0.5, con=None):
     """ Takes an S3 path and topic and looks for .json files in the S3 path and processes them
 
@@ -252,16 +301,6 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, threshold=0.5, 
         logging.exception(e)
         print(e)
 
-    # Prepare the vectorizer - this is what extracts the vocabulary terms from the tweets
-    # creating the custom, stemmed count vectorizer
-    # english_stemmer = SnowballStemmer('english')
-
-    # class StemmedCountVectorizer(CountVectorizer):
-    #     def build_analyzer(self):
-    #         analyzer = super(StemmedCountVectorizer, self).build_analyzer()
-    #         return lambda doc: ([english_stemmer.stem(w) for w in analyzer(doc)])
-    #
-
     # Process each file
     for file_key in files:
         # Download file
@@ -269,27 +308,16 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, threshold=0.5, 
         s3.meta.client.download_file(s3bucket, file_key, temp)
         try:
             tweet_df = run_topic_models(infile=temp, topic=run_topic)
-            save_classified_tweets(infile=temp, tweet_df=tweet_df, topic=run_topic, threshold=threshold, con=con)
-
+            if tweet_df is not None:
+                save_classified_tweets(infile=temp, tweet_df=tweet_df, topic=run_topic, threshold=threshold, con=con)
             # if successful - copy the file to the "processed" folder and delete from the original folder
-            proc_key = get_processed_key(file_key)
-            print("Copying to: {}".format(proc_key))
-            copy_source = {
-                'Bucket': s3bucket,
-                'Key': file_key
-            }
-            s3.meta.client.copy(copy_source, s3bucket, proc_key)
-
-            # Delete File
-            print("Deleting: {}".format(file_key))
-            client = boto3.client('s3')
-            response = client.delete_object(
-                Bucket=s3bucket,
-                Key=file_key)
+                move_s3_file(s3bucket, file_key, 'Processed')
+            else:
+                msg='No tweets found in {}.'.format(file_key)
+                logging.info(msg)
+                move_s3_file(s3bucket, file_key, 'Processed')
 
         except Exception as e:
-            logging.exception(e)
-            print(e)
+            logging.error(e)
+            move_s3_file(s3bucket, file_key, 'Failed')
             continue
-
-

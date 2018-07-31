@@ -19,6 +19,6 @@ WHERE tp_name='Graduation'
 AND  u1.ti_count >0
 AND u2.ti_count > 0
 AND ts_score>0.8
-AND tweets.created_at > '2018-03-21'
+AND tweets.created_at > '2018-07-21'
 ORDER BY tweets.created_at desc
 

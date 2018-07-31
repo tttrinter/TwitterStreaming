@@ -251,7 +251,7 @@ def insert_user(id, name, screen_name,
     try:
         cur.execute(SQL)
         con.commit()
-        return getidentity(cur, 'users', 'id')
+        return id
 
     except Exception as e:
         print(e)

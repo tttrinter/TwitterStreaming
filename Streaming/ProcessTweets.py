@@ -152,8 +152,8 @@ def run_topic_models(infile: str, topic: Topic, startline=0, endline=9000000):
         Each model appends a column to the tweet_df named after the model name.
     """
 
-    # tweet_df = tweet_text_from_file(infile, filters=topic.filters, exclusions=topic.exclusions)
-    tweet_df = tweet_text_from_file(infile, exclusions=topic.exclusions)
+    tweet_df = tweet_text_from_file(infile, filters=topic.filters, exclusions=topic.exclusions)
+    # tweet_df = tweet_text_from_file(infile, exclusions=topic.exclusions)
     if tweet_df is not None:
         for model in topic.models_list:
             msg = "Running {}: {} model.".format(topic.name, model.name)

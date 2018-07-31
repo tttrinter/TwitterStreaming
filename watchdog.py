@@ -163,7 +163,7 @@ while True:
 
     # kill any topics running that are NOT set to run
     if len(topics_to_stop) > 0:
-        pids_to_kill = running_df.loc[(running_df['tp_id'].isin(topics_to_stop) and
+        pids_to_kill = running_df.loc[(running_df['tp_id'].isin(topics_to_stop) &
                                        (running_df['rh_computer_name']==comp_name))]['rh_pid'].tolist()
         kill_processes(pids_to_kill)
         for pid in pids_to_kill:
@@ -181,11 +181,11 @@ while True:
     pids_to_kill = []
 
     # min memory increment
-    stalled = comp_df.loc[(comp_df['mem_delta'] < min_memory_delta) and (str(comp_df['rh_computer_name']) == comp_name)]['rh_pid'].tolist()
+    stalled = comp_df.loc[(comp_df['mem_delta'] < min_memory_delta) & (str(comp_df['rh_computer_name']) == comp_name)]['rh_pid'].tolist()
     pids_to_kill.extend(stalled)
 
     # running too long
-    timedout = comp_df.loc[(comp_df['run_time']>max_runtime) and (comp_df['rh_computer_name']==comp_name)]['rh_pid'].tolist()
+    timedout = comp_df.loc[(comp_df['run_time']>max_runtime) & (comp_df['rh_computer_name']==comp_name)]['rh_pid'].tolist()
     pids_to_kill.extend(timedout)
     pids_to_kill = list(set(pids_to_kill))
 

@@ -185,7 +185,7 @@ while True:
     pids_to_kill.extend(stalled)
 
     # running too long
-    timedout = comp_df.loc[(comp_df['run_time']>max_runtime) & (comp_df['rh_computer_name']==comp_name)]['rh_pid'].tolist()
+    timedout = comp_df.loc[(comp_df['run_time'] > max_runtime) & (comp_df['rh_computer_name'] == comp_name)]['rh_pid'].tolist()
     pids_to_kill.extend(timedout)
     pids_to_kill = list(set(pids_to_kill))
 

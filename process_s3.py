@@ -38,6 +38,11 @@ class MeanEmbeddingVectorizer(object):
     def transform(self, sentences):
         return lil_matrix([self.transform1(X) for X in sentences])
 
+msg = "Processing marriage files."
+logging.info(msg)
+print(msg)
+process_s3_files(topic_id=4, s3bucket='di-thrivent', s3prefix='twitter/Life Events/Marriage/', threshold=0.5)
+
 msg = "Processing graduation files."
 logging.info(msg)
 print(msg)
@@ -52,3 +57,4 @@ msg = "Processing moving files."
 logging.info(msg)
 print(msg)
 process_s3_files(topic_id=6, s3bucket='di-thrivent', s3prefix='twitter/Life Events/Moving/', threshold=0.5)
+

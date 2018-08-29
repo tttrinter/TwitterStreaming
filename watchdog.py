@@ -16,6 +16,7 @@ comp_name = os.environ['COMPUTERNAME']
 t1_df = None
 t2_df = None
 STREAM_LIMIT = 3
+DURATION_LIMIT = 8 #hours
 
 def kill_processes(pid_list):
     for pid in pid_list:
@@ -53,6 +54,7 @@ def check_tasks():
 def check_running(set_df):
     # topics running or stalled
     running_df = get_running_topics()
+    running_df['hours'] = [(datetime.now() - x).seconds / (3600) for x in running_df['rh_start_dt']]
 
     # Topics to Start
     if running_df is not None:
@@ -63,6 +65,10 @@ def check_running(set_df):
         # Topics to Stop - on this computer ONLY
         topics_to_stop = list(set(set_df.loc[set_df['tp_on_off'] == False]['tp_id']) &
                               set(running_df.loc[running_df.rh_computer_name == comp_name, 'tp_id']))
+
+        # Stalled topics - running longer than
+        stalled = list(set(running_df.loc[running_df.hours > DURATION_LIMIT, 'tp_id']))
+        topics_to_stop.extend(stalled)
 
         # Duplicate tasks - a topic should only be running once across all machines
         # where there are dupes, we'll kill all of the processes and let them re-start the stream on the machine that first

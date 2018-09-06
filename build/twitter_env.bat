@@ -23,6 +23,10 @@ conda install -y pytables
 conda install -y snappy
 conda install -y sqlalchemy
 
+rem CONNECT TO CodeCommit -follow these directions:
+rem: https://docs.aws.amazon.com/codecommit/latest/userguide/setting-up-ssh-windows.html
+rem install Firefox. Explorer won't allow the Git install
+rem install git from: https://git-scm.com/download/win
 rem add the security group from the EC2 machine to the inbound rules for RDS
 rem create an SSH key for CodeCommit from the EC2 machine and add it to a user for CodeCommit
 rem save the rsa and res.pub files to the ~/.ssh/ directory
@@ -30,5 +34,6 @@ rem modify the .ssh/config file:
 rem Host git-codecommit.us-east-1.amazonaws.com
 rem  User [new SSH key id from IAM]
 rem  IdentityFile ~/.ssh/[rsa file name]
+rem Install PyCharm from : https://www.jetbrains.com/pycharm/download/
 
 rem Copy models from https://drive.google.com/drive/folders/1htCJL_-2pCQZpc0DPqe0HhSpXFbWhdHQ to C:\Users\Administrator\Documents\Clients\Thrivent\Twitter\Life Events\

@@ -5,17 +5,22 @@ import pandas as pd
 from time import sleep
 from datetime import datetime
 import logging
+import json
 from subprocess import Popen
 from TwitterRDS.RDSQueries import get_running_topics, dead_stream_log, get_topic_rundata, dead_stream_log_bytopic
 
 # Set Constraints:
-max_runtime = 8*60 # if the process runs longer than this time in minutes, kill and restart
-min_memory_delta = 100 # if the memory doesn't change by this minimum amount in kbytes, kill and restart
-check_interval = 5 * 60 # how frequently to check the processes in search of hanging streams
+with open('watchdog_config.json') as cfg:
+    config = json.load(cfg)
+
+max_runtime = config['max_runtime'] # 480 if the process runs longer than this time in minutes, kill and restart
+min_memory_delta = config['min_memory_delta'] # if the memory doesn't change by this minimum amount in kbytes, kill and restart
+check_interval = config['check_interval'] # 300 sec, or 5 min - how frequently to check the processes in search of hanging streams
+STREAM_LIMIT = config['STREAM_LIMIT'] # 3 for most computers. Set to 2 for Win-Thrivent-Streams1 to leave memory for processing
+
 comp_name = os.environ['COMPUTERNAME']
 t1_df = None
 t2_df = None
-STREAM_LIMIT = 3
 
 def kill_processes(pid_list):
     for pid in pid_list:

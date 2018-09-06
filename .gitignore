@@ -9,6 +9,7 @@
 .idea/**/tasks.xml
 .idea/dictionaries
 .idea/**
+watchdog_config.json
 
 .idea/TwitterStreaming.iml
 .idea/misc.xml

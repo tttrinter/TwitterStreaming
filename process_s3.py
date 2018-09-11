@@ -41,7 +41,7 @@ class MeanEmbeddingVectorizer(object):
 msg = "Processing marriage files."
 logging.info(msg)
 print(msg)
-process_s3_files(topic_id=4, s3bucket='di-thrivent', s3prefix='twitter/Life Events/Marriage/', threshold=0.5)
+process_s3_files(topic_id=4, s3bucket='di-thrivent', s3prefix='twitter/Life Events/Marriage/', threshold=0.7)
 
 msg = "Processing graduation files."
 logging.info(msg)

@@ -8,6 +8,13 @@ pip install boto3
 conda install -y pandas
 pip install psycopg2
 pip install awscli --upgrade --user
+pip install nltk
+pip install sqlalchemy
+pip install numba
+pip install sklearn
+pip install scipy
+
+
 
 rem modify ~/.aws/configuration - to include a [di] profile and a recongnized key and secret:
 rem    [di]
@@ -16,12 +23,9 @@ rem    aws_secret_access_key = xBf5/QgguK6zn2w/OFOfATs47KgrNpz2LBWt0uEl
 rem    region=us-east-1
 
 setx path "%path%;c:\Users\%USERNAME%\AppData\Roaming\Python\Python36\Scripts"
-conda install -y numba
-conda install -y scikit-learn
-conda install -y nltk
+
 conda install -y pytables
 conda install -y snappy
-conda install -y sqlalchemy
 
 rem CONNECT TO CodeCommit -follow these directions:
 rem: https://docs.aws.amazon.com/codecommit/latest/userguide/setting-up-ssh-windows.html

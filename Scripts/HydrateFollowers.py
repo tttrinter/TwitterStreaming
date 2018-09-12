@@ -20,6 +20,7 @@ from TwitterFunctions import get_users
 from TwitterFunctions import parse_it
 from TwitterRDS.RDSQueries import get_dehydrated_followers
 from TwitterRDS import RDSconfig
+from TwitterFunctions import find_long_state
 
 # Set up log
 logging.basicConfig(filename='HydrateFollowers.log',
@@ -72,8 +73,11 @@ def hydrate_followers():
                 user_data['name'] = user_data['name'].apply(lambda x: parse_it(x))
                 user_data['screen_name'] = user_data['screen_name'].apply(lambda x: parse_it(x))
                 user_data['location'] = user_data['location'].apply(lambda x: parse_it(x))
-
-                # user_data['state'] = user_data['location'].apply(find_long_state)
+                user_data['geo_enabled'] = user_data['geo_enabled'].astype(int)
+                user_data['verified'] = user_data['verified'].astype(int)
+                user_data['contributors_enabled'] = user_data['contributors_enabled'].astype(int)
+                user_data['protected'] = user_data['protected'].astype(str)
+                user_data['state'] = user_data['location'].apply(find_long_state)
 
                 user_data.to_sql('users', con=engine, if_exists='append')
                 success += 1

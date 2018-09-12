@@ -18,6 +18,7 @@ from datetime import datetime
 from TwitterFunctions.TwitterFunctions import get_followers
 from TwitterRDS.RDSQueries import get_prior_user_list, update_follower_hist, get_leader_indicator_ids
 from TwitterRDS import RDSconfig
+from Scripts.HydrateFollowers import hydrate_followers
 
 source = 'postgres'
 # source = 'sqllite'
@@ -86,6 +87,11 @@ def update_followers(leader_id_list: list=None, complete_ratio=0.99):
             logging.error(e)
             pass
 
+
+def update_indicator_counts():
+    """Loops through all of the defined indicators and counts the number of indicator members
+     followed by identified users"""
+
 if __name__ == "__main__":
     # List of leaders to update
     if len(sys.argv)>1:
@@ -101,4 +107,7 @@ if __name__ == "__main__":
         complete_ratio = None
 
     # Call the process to loop through the list of ids and update them
-    update_followers(id_list, complete_ratio)
+    # update_followers(id_list, complete_ratio)
+
+    # Call the hydrate followers process when complete
+    hydrate_followers()

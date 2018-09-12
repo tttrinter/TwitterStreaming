@@ -16,8 +16,8 @@ for users of interest.
 import logging
 from numpy import ceil
 from datetime import datetime
-from TwitterFunctions.TwitterFunctions import get_users
-from TwitterFunctions.TwitterProcessing import parse_it
+from TwitterFunctions import get_users
+from TwitterFunctions import parse_it
 from TwitterRDS.RDSQueries import get_dehydrated_followers
 from TwitterRDS import RDSconfig
 
@@ -30,53 +30,56 @@ logging.basicConfig(filename='HydrateFollowers.log',
 # source = 'postgres'
 source = 'sqllite'
 
-missing_users_count = 10000
-min_user = 0
-success = 0
-error = 0
 
 engine = RDSconfig.get_sqlalchemy_engine(source)
 
-while missing_users_count > 1000:
-    new_users = get_dehydrated_followers(minid=min_user)
-    min_user = new_users[-1]
-    iterations = int(ceil(len(new_users) / 100))
-    # print('iterations:{}'.format(iterations))
-    missing_users_count = len(new_users)
+def hydrate_followers():
 
-    for i in range(iterations):
-        #     clear_output()
-        start_index = i * 100
-        end_index = start_index + 100
+    missing_users_count = 10000
+    min_user = 0
+    success = 0
+    error = 0
 
-        # print some user feedback to keep track of where the process is
-        if i % 10 == 0:
-            print("index: " + str(i) + "; time: " + datetime.strftime(datetime.now(), '%H:%M:%S') +
-                  "; Range:" + str(start_index) + ":" + str(end_index) +
-                  " Successes: " + str(success) + ", Errors: " + str(error))
-        if i % 100 == 0:
-            msg = "index: {}, Range: {}-{}, Successes: {}, Errors:{}.".format(i,
-                                                                              start_index, end_index,
-                                                                              success, error)
-            logging.info(msg)
+    while missing_users_count > 1000:
+        new_users = get_dehydrated_followers(minid=min_user)
+        min_user = new_users[-1]
+        iterations = int(ceil(len(new_users) / 100))
+        # print('iterations:{}'.format(iterations))
+        missing_users_count = len(new_users)
 
-        userlist = new_users[start_index:end_index]
-        #         print(len(userlist))
+        for i in range(iterations):
+            #     clear_output()
+            start_index = i * 100
+            end_index = start_index + 100
 
-        try:
-            user_data = get_users(userlist)
-            user_data['description'] = user_data['description'].apply(lambda x: parse_it(x))
-            user_data['name'] = user_data['name'].apply(lambda x: parse_it(x))
-            user_data['screen_name'] = user_data['screen_name'].apply(lambda x: parse_it(x))
-            user_data['location'] = user_data['location'].apply(lambda x: parse_it(x))
+            # print some user feedback to keep track of where the process is
+            if i % 10 == 0:
+                print("index: " + str(i) + "; time: " + datetime.strftime(datetime.now(), '%H:%M:%S') +
+                      "; Range:" + str(start_index) + ":" + str(end_index) +
+                      " Successes: " + str(success) + ", Errors: " + str(error))
+            if i % 100 == 0:
+                msg = "index: {}, Range: {}-{}, Successes: {}, Errors:{}.".format(i,
+                                                                                  start_index, end_index,
+                                                                                  success, error)
+                logging.info(msg)
 
-            # user_data['state'] = user_data['location'].apply(find_long_state)
+            userlist = new_users[start_index:end_index]
+            #         print(len(userlist))
 
-            user_data.to_sql('users', con=engine, if_exists='append')
-            success += 1
-        except Exception as e:
-            error += 1
-            msg = "Error with {}: {}".format(i, e)
-            logging.error(msg)
-            pass
+            try:
+                user_data = get_users(userlist)
+                user_data['description'] = user_data['description'].apply(lambda x: parse_it(x))
+                user_data['name'] = user_data['name'].apply(lambda x: parse_it(x))
+                user_data['screen_name'] = user_data['screen_name'].apply(lambda x: parse_it(x))
+                user_data['location'] = user_data['location'].apply(lambda x: parse_it(x))
+
+                # user_data['state'] = user_data['location'].apply(find_long_state)
+
+                user_data.to_sql('users', con=engine, if_exists='append')
+                success += 1
+            except Exception as e:
+                error += 1
+                msg = "Error with {}: {}".format(i, e)
+                logging.error(msg)
+                pass
 

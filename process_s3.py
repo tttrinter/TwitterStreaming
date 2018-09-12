@@ -63,3 +63,7 @@ logging.info(msg)
 print(msg)
 process_s3_files(topic_id=5, s3bucket='di-thrivent', s3prefix='twitter/Life Events/Job/', threshold=0.7)
 
+msg = "Finished processing S3 Files."
+logging.info(msg)
+print(msg)
+

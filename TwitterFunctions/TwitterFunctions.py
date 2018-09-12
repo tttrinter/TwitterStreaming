@@ -9,6 +9,7 @@ This has all of the different calls to the Tweepy API to pull and save data from
 
 import tweepy
 import sys
+import pandas as pd
 from pandas import to_numeric
 from pandas.io.json import json_normalize
 from pandas import read_sql
@@ -304,8 +305,8 @@ def get_users(user_list, byhandle=False):
             except:
                 return "Unexpected error:", sys.exc_info()[0]
 
-        temp_df = json_normalize(users_json)
-        temp_df = temp_df[user_column_names]
+        # temp_df = json_normalize(users_json)
+        temp_df = pd.DataFrame(users_json)[user_column_names]
         if i == 0:
             users_df = temp_df
         else:

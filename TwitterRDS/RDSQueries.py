@@ -839,3 +839,63 @@ def get_running_topics(con=None):
         return running_topics_df
     else:
         return None
+
+
+def update_user_indicator_counts(indicator_id, con=None):
+    """Updates the user_indicator_counts table with the number of twitter 'leader-id's' followed by each user"""
+
+    # delete the current records for this topic
+    SQL = 'DELETE FROM user_indicator_counts WHERE ti_indicator_id = {}'.format(indicator_id)
+
+    # get the connection
+    if con is None:
+        con = RDSconfig.get_connection(source)
+
+    cur = con.cursor()
+
+    try:
+        cur.execute(SQL)
+        con.commit()
+
+    except Exception as e:
+        print(e)
+        return -1
+
+    # Run the INSERT query
+    SQL = """INSERT INTO user_indicator_counts (ti_user_id, ti_count, ti_indicator_id)
+        SELECT tf_follower_id, count(tf_user_id), {}
+        FROM user_followers
+        INNER JOIN leader_indicators ON tf_user_id=li_user_id
+        WHERE li_indicator_id={}
+        GROUP BY tf_follower_id;""".format(indicator_id,indicator_id)
+
+    try:
+        cur.execute(SQL)
+        con.commit()
+        return 1
+
+    except Exception as e:
+        print(e)
+        return -1
+
+
+def get_indicators(con=None):
+    """ Gets the list of defined indicators. Used in the UpdateFollowers process"""
+    SQL = "SELECT * FROM indicators;"
+
+    # get the connection
+    if con is None:
+        con = RDSconfig.get_connection(source)
+
+    try:
+        ind_df = pd.read_sql(SQL, con)
+        if len(ind_df) > 0:
+            return ind_df['indicator_id'].tolist()
+        else:
+            return []
+
+    except Exception as e:
+        print(e)
+        return
+
+

@@ -27,8 +27,8 @@ logging.basicConfig(filename='HydrateFollowers.log',
                     datefmt='%m/%d/%Y %I:%M:%S %p',
                     level=logging.INFO)
 
-# source = 'postgres'
-source = 'sqllite'
+source = 'postgres'
+# source = 'sqllite'
 
 
 engine = RDSconfig.get_sqlalchemy_engine(source)

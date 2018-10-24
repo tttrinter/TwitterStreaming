@@ -3,7 +3,9 @@ from sklearn.feature_extraction.text import CountVectorizer
 from nltk.stem import SnowballStemmer
 from Streaming import process_s3_files
 from scipy.sparse import lil_matrix
+from TwitterRDS.RDSQueries import get_topics_toprocess
 import numpy as np
+import sys
 
 # Set up log
 logging.basicConfig(filename='process_s3.log',
@@ -38,32 +40,50 @@ class MeanEmbeddingVectorizer(object):
     def transform(self, sentences):
         return lil_matrix([self.transform1(X) for X in sentences])
 
-msg = "Processing marriage files."
-logging.info(msg)
-print(msg)
-process_s3_files(topic_id=4, s3bucket='di-thrivent', s3prefix='twitter/Life Events/Marriage/', threshold=0.7)
+# Gather inputs from command line
+# Optional command line topic to run
+if len(sys.argv) == 2:
+    single_topic = sys.argv[1]
+else:
+  single_topic = None
 
-msg = "Processing graduation files."
-logging.info(msg)
-print(msg)
-process_s3_files(topic_id=1 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Graduation/', threshold=0.7)
+# Get topics to run
+topics = get_topics_toprocess()
+if single_topic:
+    topics = topics.loc[topics.tp_name == single_topic]
 
-msg = "Processing birth files."
-logging.info(msg)
-print(msg)
-process_s3_files(topic_id=2 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Birth/', threshold=0.7)
+for index, row in topics.iterrows():
+    tp_id = row['tp_id']
+    topic_name = row['tp_name']
+    s3folder = 'twitter/Life Events/{}/'.format(topic_name)
+    thresh = row['tp_threshold']
 
-msg = "Processing moving files."
-logging.info(msg)
-print(msg)
-process_s3_files(topic_id=6, s3bucket='di-thrivent', s3prefix='twitter/Life Events/Moving/', threshold=0.5)
+    msg = "Processing {} files.".format(topic_name)
+    logging.info(msg)
+    print(msg)
+    process_s3_files(topic_id=tp_id, s3bucket='di-thrivent', s3prefix=s3folder, threshold=thresh)
 
-msg = "Processing job files."
-logging.info(msg)
-print(msg)
-process_s3_files(topic_id=5, s3bucket='di-thrivent', s3prefix='twitter/Life Events/Job/', threshold=0.7)
-
-msg = "Finished processing S3 Files."
-logging.info(msg)
-print(msg)
+# msg = "Processing graduation files."
+# logging.info(msg)
+# print(msg)
+# process_s3_files(topic_id=1 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Graduation/', threshold=0.7)
+#
+# msg = "Processing birth files."
+# logging.info(msg)
+# print(msg)
+# process_s3_files(topic_id=2 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Birth/', threshold=0.7)
+#
+# msg = "Processing moving files."
+# logging.info(msg)
+# print(msg)
+# process_s3_files(topic_id=6, s3bucket='di-thrivent', s3prefix='twitter/Life Events/Moving/', threshold=0.5)
+#
+# msg = "Processing job files."
+# logging.info(msg)
+# print(msg)
+# process_s3_files(topic_id=5, s3bucket='di-thrivent', s3prefix='twitter/Life Events/Job/', threshold=0.7)
+#
+# msg = "Finished processing S3 Files."
+# logging.info(msg)
+# print(msg)
 

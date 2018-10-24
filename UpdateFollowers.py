@@ -16,7 +16,7 @@ import pandas as pd
 import logging
 from datetime import datetime
 from TwitterFunctions.TwitterFunctions import get_followers
-from TwitterRDS.RDSQueries import get_prior_user_list, update_follower_hist, get_leader_indicator_ids
+from TwitterRDS.RDSQueries import get_prior_user_list, update_follower_hist, get_leader_indicator_ids, get_indicators, update_user_indicator_counts
 from TwitterRDS import RDSconfig
 from Scripts.HydrateFollowers import hydrate_followers
 
@@ -92,6 +92,24 @@ def update_indicator_counts():
     """Loops through all of the defined indicators and counts the number of indicator members
      followed by identified users"""
 
+    msg = "Updating user-indicator counts"
+    print(msg)
+    logging.info(msg)
+
+    indicators = get_indicators()
+    for ind in indicators:
+        update_user_indicator_counts(ind)
+        msg = "Updated indictator id {}".format(ind)
+        print(msg)
+        logging.info(msg)
+
+    msg = "Finished updating user-indicator counts."
+    print(msg)
+    logging.info(msg)
+
+    return
+
+
 if __name__ == "__main__":
     # List of leaders to update
     if len(sys.argv)>1:
@@ -110,4 +128,7 @@ if __name__ == "__main__":
     # update_followers(id_list, complete_ratio)
 
     # Call the hydrate followers process when complete
-    hydrate_followers()
+    # hydrate_followers()
+
+    # Update the user_indicator_counts table
+    update_indicator_counts()

@@ -302,6 +302,9 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, threshold=0.5, 
         print(e)
 
     # Process each file
+    msg = '{} {} files to process.'.format(run_topic.name, len(files))
+    print(msg)
+    logging.info(msg)
     for file_key in files:
         # Download file
         temp = 'temp_file.json'

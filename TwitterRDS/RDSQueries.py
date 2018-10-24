@@ -899,3 +899,25 @@ def get_indicators(con=None):
         return
 
 
+def get_topics_toprocess(con=None):
+    """ Gets all of the topics that have models defined and are turned on"""
+    SQL = """SELECT DISTINCT tp_id, tp_name, tp_threshold
+        FROM topics t
+        LEFT OUTER JOIN models m ON m.md_tp_id=t.tp_id
+        WHERE tp_on_off = true AND m.md_filename is not NULL and m.md_vect_file is not null"""
+
+    if con is None:
+        con = RDSconfig.get_connection()
+
+    try:
+        process_topics_df = pd.read_sql(SQL, con)
+    except Exception as e:
+        return e
+
+    if len(process_topics_df ) > 0:
+        return process_topics_df
+    else:
+        return None
+
+
+

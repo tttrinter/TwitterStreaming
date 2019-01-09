@@ -825,7 +825,7 @@ def get_running_topics(con=None):
             FROM stream_run_hist
             INNER JOIN topics ON tp_id=rh_tp_topic_id
             WHERE tp_on_off=TRUE
-            AND rh_end_dt IS NULL;"""
+            AND rh_end_dt IS NULL OR rh_status='running';"""
 
     if con is None:
         con = RDSconfig.get_connection()

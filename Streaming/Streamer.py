@@ -121,7 +121,7 @@ class TwitterStream(object):
         self.auth_name = auth_name
         self.myStreamListener = FileOutListener()
 
-    def startStream(self, run_time=None, tweet_count=None, async=False):
+    def startStream(self, run_time=None, tweet_count=None, a_sync=False):
 
         # Set up time variables - used to cutoff the stream when run_time is not none
         # Also used to keep track of time since last update - to cut off dead streams
@@ -142,7 +142,7 @@ class TwitterStream(object):
         logging.info("Streamer.startStream: started new stream.")
 
         try:
-            myStream.filter(languages=["en"], track=filters, async=async)
+            myStream.filter(languages=["en"], track=filters, a_sync=a_sync)
         except AttributeError:
             pass
         except Exception as e:
@@ -221,7 +221,7 @@ def run_topic_continuous(topic_id: int, s3_bucket: str, s3_path: str, tweet_coun
         run_stream = TwitterStream(name=run_topic.name, topic=run_topic, auth_name=auth_name)
 
         try:
-            run_stream.startStream(tweet_count=tweet_count, async=True)
+            run_stream.startStream(tweet_count=tweet_count, a_sync=True)
 
         except AttributeError:
             pass

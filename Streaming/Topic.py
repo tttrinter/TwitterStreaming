@@ -19,13 +19,24 @@ class Topic(object):
     Static class to method to hold lists for filters, exclusions and associated models
     """
 
-    def __init__(self, topic_id=None, name=None, filters: List[str]=[], exclusions: List[str]=[], models_list=[], description:str=None):
+    def __init__(self,
+                 topic_id=None,
+                 name=None,
+                 filters: List[str]=[],
+                 exclusions: List[str]=[],
+                 models_list=[],
+                 description:str=None,
+                 threshold:float=0.5,
+                 sub_topics: List[int]=[]):
+
         self.topic_id = topic_id
         self.name = name
         self.filters = filters
         self.exclusions = exclusions
         self.models_list = models_list
         self.description = description
+        self.threshold = threshold
+        self.sub_topics = sub_topics
 
     def saveTopic(self, db=None):
         """ Saves the filters, exclusions and model data to the database
@@ -36,7 +47,7 @@ class Topic(object):
             status: success or failure of the save
         """
         # Insert Topic
-        topic_id = q.insert_topic(self.name, self.filters, self.exclusions, self.description, db)
+        topic_id = q.insert_topic(self.name, self.filters, self.exclusions, self.description, self.threshold, self.sub_topics, db)
         for model in self.models_list:
             model.topic_id=topic_id
             try:
@@ -66,6 +77,9 @@ class Topic(object):
                 if key in ['filters', 'exclusions']:
                     if topic_dict[key] is not None:
                         self.__setattr__(key, [x.strip() for x in topic_dict[key].split(',')])
+                elif key == 'sub_topics':
+                    if topic_dict[key] is not None:
+                        self.__setattr__(key, [int(x.strip()) for x in topic_dict[key].split(',')])
                 else:
                     self.__setattr__(key, topic_dict[key])
         else:

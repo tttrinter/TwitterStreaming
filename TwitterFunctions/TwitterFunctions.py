@@ -388,34 +388,54 @@ def get_db_friends(follower_id, conn):
     return existing_ids['tf_user_id'].tolist()
 
 
-def get_tweets_by_id(tweet_id_list):
+def get_tweets_by_id(tweet_id_list, output='frames'):
     """ Calls the Twitter API to retrieve id's by a list of tweet ids
 
     Args:
-        tweet_id_list:
+        tweet_id_list: list of tweet_ids to retrieve
+        output: creating two output formats. Original "frames" separates out the user from the tweet and returns
+        dataframes; "all" returns the raw tweets in a single dataframe..
 
     Returns:
          tweet_detail_df: a pandas dataframe with the details from the tweet
          user_df: a panas dataframe with the user data
     """
 
+    # create a holder for the results
+    tweets = []
 
-    tweets = api.statuses_lookup(id_=tweet_id_list, include_entities=False)
-    tweet_df = json_normalize(tweets)
+    # break the tweet_id_list into 100 tweet pieces. That is the limit for the API
+    iterations = ceil(len(tweet_id_list) / 100)
 
-    user_df = tweet_df[user_columns]
-    user_df.columns = user_column_names
-    user_df = user_df.drop_duplicates()
+    for i in range(0,iterations):
+        start = i * 100
+        end = min((i + 1) * 100, len(tweet_id_list))
+        ids = list(tweet_id_list[start:end])
+        try:
+            tweets = api.statuses_lookup(ids, include_entities=False)
+            tweets.extend(tweets)
+        except:
+            pass
 
-    tweet_detail_df = tweet_df[tweet_columns]
-    tweet_detail_df.rename(columns={'id': 'tweet_id', 'user.id': 'user_id'}, inplace=True)
+    # tweet_df = json_normalize(tweets)
+    tweet_df = pd.DataFrame(tweets)
 
-    return tweet_detail_df, user_df
+    if output == 'frames':
+        user_df = tweet_df[user_columns]
+        user_df.columns = user_column_names
+        user_df = user_df.drop_duplicates()
+
+        tweet_detail_df = tweet_df[tweet_columns]
+        tweet_detail_df.rename(columns={'id': 'tweet_id', 'user.id': 'user_id'}, inplace=True)
+
+        return tweet_detail_df, user_df
+
+    else:
+        return tweet_df
 
 
 def hydrate_user(user: TwitterUser):
     """ Calls the Twitter API to set properties of a single user object
-
     Calls the GET users/lookup API function (https://dev.twitter.com/rest/reference/get/users/lookup)
 
     Args:
@@ -428,7 +448,7 @@ def hydrate_user(user: TwitterUser):
     id_list = [user.id]
     try:
         user_dict = api.lookup_users(id_list)[0]
-    except TweepError as e:
+    except Exception as e:
         return "TweepError:" + e.message[0]['code']
 
     prop_dict = vars(user)

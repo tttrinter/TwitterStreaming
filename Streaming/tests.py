@@ -7,6 +7,8 @@ from nltk.stem import SnowballStemmer
 # from time import sleep
 # from Streaming.Streamer import stream_to_S3
 from Streaming.ProcessTweets import process_s3_files
+import pickle
+import pandas as pd
 
 
 # # Testing with graduation data
@@ -91,3 +93,4 @@ from Streaming.ProcessTweets import process_s3_files
 
 # process_s3_files(topic_id=1 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Graduation/', threshold=0.5)
 # process_s3_files(topic_id=2 ,s3bucket='di-thrivent', s3prefix='twitter/Life Events/Birth/', threshold=0.5)
+

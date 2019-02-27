@@ -13,6 +13,7 @@ from TwitterRDS.RDSEntweeties import merge_tweet
 from  TwitterRDS import RDSQueries as q
 from TwitterFunctions.TwitterProcessing import clean_text_col
 from .Topic import Topic
+from TwitterFunctions import get_tweets_by_id
 
 import json
 import pandas as pd
@@ -99,6 +100,58 @@ def tweet_text_from_file(infile: str, startline=0, endline=9000000, filters=[], 
     return tweet_df
 
 
+def tweet_text_from_pickle(infile: str, startline=0, endline=9000000, filters=[], exclusions=[]):
+    with open(infile, "rb+") as pickle_file:
+        try:
+            upstream_tweets = pickle.load(pickle_file, fix_imports=True, errors='strict')
+            upstream_df = pd.DataFrame(upstream_tweets)
+            tweet_df = upstream_df[['id', 'text']]
+            tweet_df.columns = ['tweet_id', 'text']
+            tweet_df.drop_duplicates(subset='text',keep='first',inplace=True)
+
+        except:
+            return None
+
+        # clean text columns and add word lists text lists
+        tweet_df = clean_text_cols(tweet_df)
+
+        # reapply filters since Twitter doesn't seem to catch everything
+        tweet_df = filter_text_cols(tweet_df, filters=[], exclusions=[] )
+
+        return tweet_df
+
+
+def clean_text_cols(tweet_df):
+    """ Cleans the text columns of a tweet DataFrame and adds the clean columns needed for some models
+    :param tweet_df - the data frame with tweet_ids and text. Text column is used for conversions
+    :return tweet_df - returns the same data frame with additional columns
+    """
+
+    if len(tweet_df)>0:
+        tweet_df = clean_text_col(tweet_df, 'text', 'clean_text', False)
+        tweet_df = clean_text_col(tweet_df, 'text', 'clean_text_list', True)
+
+    return tweet_df
+
+
+def filter_text_cols(tweet_df, filters=[], exclusions=[] ):
+    """ Applies topic filters and exclusions, only keeping tweets that have 1 or more filter values and no exclusions
+    :param tweet_df - the data frame with tweet_ids and text. Text column is used for conversions
+    :param filters - list of filter words for the topic
+    :param exclusions - list of exclusion words for the topic
+    :return tweet_df - returns the data frame reduced from the filtering
+    """
+
+    # apply filters and exclusions
+    tweet_df.loc[:, 'filter_count'] = tweet_df['text'].apply(
+        lambda tweet: len([x for x in filters if x in str(tweet)]))
+    tweet_df.loc[:, 'exclusion_count'] = tweet_df['text'].apply(
+        lambda tweet: len([x for x in exclusions if x in str(tweet)]))
+
+    tweet_df = tweet_df.loc[(tweet_df.filter_count > 0) & (tweet_df.exclusion_count == 0)]
+    return tweet_df
+
+
 def classify_tweets(tweet_df: pd.DataFrame, pickled_model: str, pickled_vectorizer: str, model_var: str, model_type: str):
     """
     Processes a dataframe of tweets (resulting from passing an S3 tweet file through tweet_text_from_file)
@@ -137,12 +190,11 @@ def classify_tweets(tweet_df: pd.DataFrame, pickled_model: str, pickled_vectoriz
             pass
     return tweet_df
 
-
-def run_topic_models(infile: str, topic: Topic, startline=0, endline=9000000):
+def run_topic_models(tweet_df: pd.DataFrame, topic: Topic, startline=0, endline=9000000):
     """ Runs all topic models on the input file and returns classifications
 
     Args:
-        infile: str, directory and file name for the .json tweet file
+        tweet_df: pandas DataFrame- data frame with tweet_id and text columns for classification
         topic: Topic, this is where the models are defined
         startinle: int, optional - what line to start on in the file
         endline: int, optional - what line to end on in the file
@@ -152,8 +204,6 @@ def run_topic_models(infile: str, topic: Topic, startline=0, endline=9000000):
         Each model appends a column to the tweet_df named after the model name.
     """
 
-    tweet_df = tweet_text_from_file(infile, filters=topic.filters, exclusions=topic.exclusions)
-    # tweet_df = tweet_text_from_file(infile, exclusions=topic.exclusions)
     if tweet_df is not None:
         for model in topic.models_list:
             msg = "Running {}: {} model.".format(topic.name, model.name)
@@ -228,6 +278,60 @@ def save_classified_tweets(infile: str, tweet_df: pd.DataFrame, topic: Topic, th
     f.close()
 
 
+def save_upstream_tweets(tweets: pd.DataFrame, tweet_df: pd.DataFrame, topic: Topic, threshold=0.5, con=None):
+    """ With classified tweets in the tweet_df, write the tweet and users to the database connection
+
+    Args:
+        tweets: DataFrame, the full DataFrame of upstream tweets, complete with hydrated users
+        tweet_df: DataFrame, the resulting DataFrame from scored topic_models
+        threshold: float, the probability cutoff for a positive classification. Default=0.5.
+        con: database connection -the destination for writing the file.
+
+    Returns:
+        None
+    """
+
+    # Reduce the tweet_df to only those tweets that meet or exceed the threshold
+    for i in range(0, len(topic.models_list)):
+        if i == 0:
+            filter = "(tweet_df['{}']>={})".format(topic.models_list[i].name, threshold)
+        else:
+            filter += " | (tweet_df['{}']>={})".format(topic.models_list[i].name, threshold)
+
+    scores_df = tweet_df[eval(filter)]
+    save_tweets = list(scores_df['tweet_id'])
+
+    unsaved_tweets = []
+    tweets_to_save = tweets.loc[tweets.id.isin(save_tweets)]
+    for index, row in tweets_to_save.iterrows():
+        tweet_dict = row.to_dict()
+        try:
+            tweet_id = tweet_dict['id']
+            if tweet_id in save_tweets:
+                new_tweet = Tweet.from_dict(tweet_dict)
+                merge_tweet(new_tweet, con=con)
+
+        except Exception as e:
+            logging.exception('tweet_id: {} in {} failed to load.'.format(tweet_id, infile))
+            logging.exception('Tweet load error: {}'.format(e))
+            # add the unsaved tweet to the list so the scores can also be excluded from saving
+            unsaved_tweets.append(tweet_id)
+            pass
+
+        # Save the scores
+        for model in topic.models_list:
+            # The column order is important - they get renamed to match the DB in the RDSQueries
+            try:
+                save_scores = scores_df[['tweet_id', model.name]]
+                save_scores = save_scores[~save_scores.tweet_id.isin(unsaved_tweets)]
+                save_scores['model_id'] = model.model_id
+                q.save_scores(save_scores=save_scores, con=con)
+            except Exception as e:
+                logging.exception("Failed saving scores: {}.".format(infile))
+                logging.exception("Score save error: {}".format(e))
+                pass
+    return scores_df, save_tweets
+
 def move_s3_file(s3bucket, file_key, dest):
    """Move an S3 file to a new location and delete from the current.
 
@@ -264,15 +368,13 @@ def move_s3_file(s3bucket, file_key, dest):
    # Delete File
 
 
-
-def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, threshold=0.5, con=None):
+def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, con=None):
     """ Takes an S3 path and topic and looks for .json files in the S3 path and processes them
 
     Args:
         s3bucket: str, S3 bucket containing the files to process
         s3prefix: str, file prefix that will identify the files in the S3 bucket
         topic: Topic, contains the information on models to process the tweets
-        threshold: float, the probability cutoff for a positive classification. Default=0.5.
         con: database connection -the destination for writing the file.
 
     Returns:
@@ -286,6 +388,11 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, threshold=0.5, 
     # Create the topic
     run_topic = Topic(topic_id=topic_id )
     run_topic.readTopic(db=con)
+
+    if len(run_topic.sub_topics)>0:
+        upstream = True
+    else:
+        upstream = False
 
     # Check for files
     files = []
@@ -309,18 +416,95 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, threshold=0.5, 
         # Download file
         temp = 'temp_file.json'
         s3.meta.client.download_file(s3bucket, file_key, temp)
-        try:
-            tweet_df = run_topic_models(infile=temp, topic=run_topic)
-            if tweet_df is not None:
-                save_classified_tweets(infile=temp, tweet_df=tweet_df, topic=run_topic, threshold=threshold, con=con)
-            # if successful - copy the file to the "processed" folder and delete from the original folder
-                move_s3_file(s3bucket, file_key, 'Processed')
-            else:
-                msg='No tweets found in {}.'.format(file_key)
-                logging.info(msg)
-                move_s3_file(s3bucket, file_key, 'Processed')
+        # extract tweet_ids and text
 
+        if upstream:
+            try:
+                process_upstream_tweets(temp, run_topic.sub_topics, con=con)
+                # Move the file when done with all topics
+                move_s3_file(s3bucket, file_key, 'Processed')
+            except Exception as e:
+                logging.error(e)
+                move_s3_file(s3bucket, file_key, 'Failed')
+                continue
+
+        else:
+            try:
+                tweet_df = tweet_text_from_file(temp, filters=run_topic.filters, exclusions=run_topic.exclusions)
+                tweet_df = run_topic_models(tweet_df=tweet_df, topic=run_topic)
+                if tweet_df is not None:
+                    save_classified_tweets(infile=temp, tweet_df=tweet_df, topic=run_topic, threshold=run_topic.threshold, con=con)
+                # if successful - copy the file to the "processed" folder and delete from the original folder
+                    move_s3_file(s3bucket, file_key, 'Processed')
+                else:
+                    msg='No tweets found in {}.'.format(file_key)
+                    logging.info(msg)
+                    move_s3_file(s3bucket, file_key, 'Processed')
+            except Exception as e:
+                logging.error(e)
+                move_s3_file(s3bucket, file_key, 'Failed')
+                continue
+
+
+def get_upstream_tweets(tweet_file):
+    data = pd.read_json(tweet_file, lines=True, orient='records', dtype=False)
+    tweet_ids = data.loc[~data.in_reply_to_status_id.isna()]['in_reply_to_status_id_str'].drop_duplicates()
+
+    if len(tweet_ids)>0:
+        tweets = get_tweets_by_id(tweet_ids, output='all')
+        if len(tweets)>0:
+            tweets.drop_duplicates(subset='id', inplace=True)
+            return tweets
+        else:
+            return None
+    else:
+        return None
+
+
+def process_upstream_tweets(tweet_file, topic_list, con=None):
+    """ After pulling upstream tweets for a downstream topic, classify the upstream tweets for every topic in the list
+    :param tweet_file: tweet file of downstream tweets
+    :param topic_list: list of topics to run by id
+    :param con: database connection; uses default if none
+    :return: dataframe with scores for each tweet and each topic
+    """
+
+    # Get database connection:
+    if con is None:
+        con = q.RDSconfig.get_connection('postgres')
+
+    # get upstream tweets
+    tweets = get_upstream_tweets(tweet_file)
+    if tweets is None:
+        return
+    else:
+        tweet_df = tweets[['id', 'text']]
+        tweet_df.rename(columns={'id':'tweet_id'}, inplace=True)
+        tweet_df.drop_duplicates(inplace=True)
+        tweet_df = clean_text_cols(tweet_df)
+
+    for topic_id in topic_list:
+        # Create the topic
+        run_topic = Topic(topic_id=topic_id)
+        run_topic.readTopic(db=con)
+
+        topic_tweets_df = filter_text_cols(tweet_df, run_topic.filters, run_topic.exclusions)
+        if len(topic_tweets_df)>0:
+            topic_tweets_df = run_topic_models(topic_tweets_df, topic=run_topic)
+        else:
+            topic_tweets_df = None
+
+    # save classified tweets
+        try:
+            if topic_tweets_df is not None:
+                save_upstream_tweets(tweets, tweet_df=topic_tweets_df, topic=run_topic, threshold=run_topic.threshold, con=con)
+            # if successful - copy the file to the "processed" folder and delete from the original folder
+            #     move_s3_file(s3bucket, file_key, 'Processed')
+            else:
+                msg='No tweets found for topic {}.'.format(run_topic.name)
+                logging.info(msg)
+                # move_s3_file(s3bucket, file_key, 'Processed')
         except Exception as e:
             logging.error(e)
-            move_s3_file(s3bucket, file_key, 'Failed')
+            # move_s3_file(s3bucket, file_key, 'Failed')
             continue

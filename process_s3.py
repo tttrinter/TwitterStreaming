@@ -61,7 +61,7 @@ for index, row in topics.iterrows():
     msg = "Processing {} files.".format(topic_name)
     logging.info(msg)
     print(msg)
-    process_s3_files(topic_id=tp_id, s3bucket='di-thrivent', s3prefix=s3folder, threshold=thresh)
+    process_s3_files(topic_id=tp_id, s3bucket='di-thrivent', s3prefix=s3folder)
 
 # msg = "Processing graduation files."
 # logging.info(msg)

@@ -350,13 +350,15 @@ def get_prior_user_list(leader_id, con=None):
 
 
 ############ TOPICS ############
-def insert_topic(topic_name: str, filters=[], exclusions=[], topic_description: str=None, con=None):
+def insert_topic(topic_name: str, filters=[], exclusions=[], topic_description: str=None, threshold: float=0.5, sub_topics=[], con=None):
     """ Inserts a topic into the topics table in the database
     Args:
     :param topic_name: Name of the topic or life event
     :param filters: comma separated list of terms for the Twitter filter
     :param exclusions: comma separated list of exclusion terms
     :param topic_description: short description of the topic
+    :param threshold: topic threshold for classification
+    :param sub_topics: list of subtopic ids (integers) to run
     :param con: database connection
 
     Returns:
@@ -368,12 +370,14 @@ def insert_topic(topic_name: str, filters=[], exclusions=[], topic_description: 
 
     # TODO: need to add code to avoid duplicates
 
-    SQL = """ INSERT INTO topics (tp_name, tp_filters, tp_exclusions, tp_description, tp_create_dt)
-    VALUES ("{}","{}","{}","{}","{}");""".format(
+    SQL = """ INSERT INTO topics (tp_name, tp_filters, tp_exclusions, tp_description, tp_child_topics, tp_threshold, tp_create_dt)
+    VALUES ("{}","{}","{}","{}","{}","{}","{}");""".format(
         topic_name.replace("'"," "),
         str(filters),
         str(exclusions),
         topic_description,
+        threshold,
+        sub_topics,
         str(datetime.now()))
 
     SQL = fix_none(SQL)
@@ -407,7 +411,9 @@ def read_topic(topic_id: int, con=None):
         topic_dict = {"name": tr['tp_name'],
                       "filters": tr['tp_filters'],
                       "exclusions": tr['tp_exclusions'],
-                      "description": tr['tp_description']
+                      "description": tr['tp_description'],
+                      "sub_topics": tr['tp_child_topics'],
+                      "threshold": tr['tp_threshold']
         }
         return topic_dict
     else:
@@ -901,10 +907,13 @@ def get_indicators(con=None):
 
 def get_topics_toprocess(con=None):
     """ Gets all of the topics that have models defined and are turned on"""
-    SQL = """SELECT DISTINCT tp_id, tp_name, tp_threshold
-        FROM topics t
-        LEFT OUTER JOIN models m ON m.md_tp_id=t.tp_id
-        WHERE tp_on_off = true AND m.md_filename is not NULL and m.md_vect_file is not null"""
+    SQL = """SELECT DISTINCT tp_id, tp_name, tp_threshold, tp_child_topics
+            FROM topics t
+            LEFT OUTER JOIN models m ON m.md_tp_id=t.tp_id
+            WHERE tp_on_off = true 
+            AND (m.md_filename is not NULL 
+            AND m.md_vect_file is not null) 
+            OR t.tp_child_topics is not NULL"""
 
     if con is None:
         con = RDSconfig.get_connection()

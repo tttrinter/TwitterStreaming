@@ -397,8 +397,8 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, con=None):
 
     # Check for files
     files = []
-    # boto3.setup_default_session(profile_name='di')
-    boto3.setup_default_session()
+    boto3.setup_default_session(profile_name='di')
+    # boto3.setup_default_session()
     s3 = boto3.resource('s3')
     bucket = s3.Bucket(s3bucket)
 

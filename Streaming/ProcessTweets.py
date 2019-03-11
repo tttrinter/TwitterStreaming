@@ -352,7 +352,8 @@ def move_s3_file(s3bucket, file_key, dest):
        'Key': file_key
    }
 
-   boto3.setup_default_session(profile_name='di')
+   # boto3.setup_default_session(profile_name='di')
+   boto3.setup_default_session()
    s3 = boto3.client('s3')
 
    try:
@@ -396,7 +397,8 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, con=None):
 
     # Check for files
     files = []
-    boto3.setup_default_session(profile_name='di')
+    # boto3.setup_default_session(profile_name='di')
+    boto3.setup_default_session()
     s3 = boto3.resource('s3')
     bucket = s3.Bucket(s3bucket)
 
@@ -415,10 +417,18 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, con=None):
     for file_key in files:
         # Download file
         temp = 'temp_file.json'
-        s3.meta.client.download_file(s3bucket, file_key, temp)
+        err = True
+        try:
+            s3.meta.client.download_file(s3bucket, file_key, temp)
+            err = False
+        except Exception as e:
+            print(e)
+            logging.error(e)
+            err = True
+
         # extract tweet_ids and text
 
-        if upstream:
+        if upstream and not err:
             try:
                 process_upstream_tweets(temp, run_topic.sub_topics, con=con)
                 # Move the file when done with all topics
@@ -428,7 +438,7 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, con=None):
                 move_s3_file(s3bucket, file_key, 'Failed')
                 continue
 
-        else:
+        elif not err :
             try:
                 tweet_df = tweet_text_from_file(temp, filters=run_topic.filters, exclusions=run_topic.exclusions)
                 tweet_df = run_topic_models(tweet_df=tweet_df, topic=run_topic)

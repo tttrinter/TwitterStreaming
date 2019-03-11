@@ -142,7 +142,7 @@ class TwitterStream(object):
         logging.info("Streamer.startStream: started new stream.")
 
         try:
-            myStream.filter(languages=["en"], track=filters, a_sync=a_sync)
+            myStream.filter(languages=["en"], track=filters, async=a_sync)
         except AttributeError:
             pass
         except Exception as e:

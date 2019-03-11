@@ -1,5 +1,5 @@
 {"max_runtime": 480,
 	"min_memory_delta": 100,
 	"check_interval": 300,
-	"STREAM_LIMIT": 3
+	"STREAM_LIMIT": 2
 }

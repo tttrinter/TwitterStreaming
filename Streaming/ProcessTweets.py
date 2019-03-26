@@ -303,6 +303,9 @@ def save_upstream_tweets(tweets: pd.DataFrame, tweet_df: pd.DataFrame, topic: To
 
     unsaved_tweets = []
     tweets_to_save = tweets.loc[tweets.id.isin(save_tweets)]
+    msg = "Saving {} tweets for topic: {}.".format(len(tweets_to_save, topic.name))
+    logging.info(msg)
+    print(msg)
     for index, row in tweets_to_save.iterrows():
         tweet_dict = row.to_dict()
         try:
@@ -352,8 +355,8 @@ def move_s3_file(s3bucket, file_key, dest):
        'Key': file_key
    }
 
-   # boto3.setup_default_session(profile_name='di')
-   boto3.setup_default_session()
+   boto3.setup_default_session(profile_name='di')
+   # boto3.setup_default_session()
    s3 = boto3.client('s3')
 
    try:
@@ -484,7 +487,11 @@ def process_upstream_tweets(tweet_file, topic_list, con=None):
         con = q.RDSconfig.get_connection('postgres')
 
     # get upstream tweets
+    msg = 'Getting upstream tweets.'
+    logging.info(msg)
+    print(msg)
     tweets = get_upstream_tweets(tweet_file)
+    print("Pulled {} upstream tweets.".format(len(tweets)))
     if tweets is None:
         return
     else:
@@ -497,6 +504,9 @@ def process_upstream_tweets(tweet_file, topic_list, con=None):
         # Create the topic
         run_topic = Topic(topic_id=topic_id)
         run_topic.readTopic(db=con)
+        msg = "Running {} on upstream tweets.".format(run_topic.name)
+        logging.info(msg)
+        print(msg)
 
         topic_tweets_df = filter_text_cols(tweet_df, run_topic.filters, run_topic.exclusions)
         if len(topic_tweets_df)>0:
@@ -513,6 +523,7 @@ def process_upstream_tweets(tweet_file, topic_list, con=None):
             else:
                 msg='No tweets found for topic {}.'.format(run_topic.name)
                 logging.info(msg)
+                print(msg)
                 # move_s3_file(s3bucket, file_key, 'Processed')
         except Exception as e:
             logging.error(e)

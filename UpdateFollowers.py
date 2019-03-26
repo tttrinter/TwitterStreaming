@@ -125,10 +125,10 @@ if __name__ == "__main__":
         complete_ratio = None
 
     # Call the process to loop through the list of ids and update them
-    # update_followers(id_list, complete_ratio)
+    update_followers(id_list, complete_ratio)
 
     # Call the hydrate followers process when complete
-    # hydrate_followers()
+    hydrate_followers()
 
     # Update the user_indicator_counts table
     update_indicator_counts()

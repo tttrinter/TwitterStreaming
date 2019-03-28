@@ -412,8 +412,8 @@ def get_tweets_by_id(tweet_id_list, output='frames'):
         end = min((i + 1) * 100, len(tweet_id_list))
         ids = list(tweet_id_list[start:end])
         try:
-            tweets = api.statuses_lookup(ids, include_entities=False)
-            tweets.extend(tweets)
+            twts = api.statuses_lookup(ids, include_entities=False)
+            tweets.extend(twts)
         except:
             pass
 

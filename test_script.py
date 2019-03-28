@@ -85,9 +85,9 @@ class MeanEmbeddingVectorizer(object):
 # json_file = 'C:\\Users\\tttri\\OneDrive\\Documents\\Data Insights\\Clients\\Thrivent\\Twitter\\Life Events\\Congratulations\\Congratulations_20190206162605.json'
 # congrat_topics=[1,2,3,4,5,6]
 # process_upstream_tweets(tweet_file = json_file, topic_list=congrat_topics, con=None)
-process_s3_files(topic_id=1,
+process_s3_files(topic_id=9,
                  s3bucket= 'di-thrivent',
-                 s3prefix= 'twitter/Life Events/Graduation/',
+                 s3prefix= 'twitter/Life Events/Congratulations/',
                  con=None)
 # classed_tweets = run_topic_models(infile=data_path+data_file, topic=new_topic)
 

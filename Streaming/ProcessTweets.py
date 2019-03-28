@@ -303,7 +303,7 @@ def save_upstream_tweets(tweets: pd.DataFrame, tweet_df: pd.DataFrame, topic: To
 
     unsaved_tweets = []
     tweets_to_save = tweets.loc[tweets.id.isin(save_tweets)]
-    msg = "Saving {} tweets for topic: {}.".format(len(tweets_to_save, topic.name))
+    msg = "Saving {} tweets for topic: {}.".format(len(tweets_to_save), topic.name)
     logging.info(msg)
     print(msg)
     for index, row in tweets_to_save.iterrows():
@@ -315,7 +315,7 @@ def save_upstream_tweets(tweets: pd.DataFrame, tweet_df: pd.DataFrame, topic: To
                 merge_tweet(new_tweet, con=con)
 
         except Exception as e:
-            logging.exception('tweet_id: {} in {} failed to load.'.format(tweet_id, infile))
+            logging.exception('tweet_id: {} failed to load.'.format(tweet_id))
             logging.exception('Tweet load error: {}'.format(e))
             # add the unsaved tweet to the list so the scores can also be excluded from saving
             unsaved_tweets.append(tweet_id)
@@ -330,7 +330,7 @@ def save_upstream_tweets(tweets: pd.DataFrame, tweet_df: pd.DataFrame, topic: To
                 save_scores['model_id'] = model.model_id
                 q.save_scores(save_scores=save_scores, con=con)
             except Exception as e:
-                logging.exception("Failed saving scores: {}.".format(infile))
+                logging.exception("Failed saving scores: {}.".format(model.name))
                 logging.exception("Score save error: {}".format(e))
                 pass
     return scores_df, save_tweets
@@ -423,6 +423,7 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, con=None):
         err = True
         try:
             s3.meta.client.download_file(s3bucket, file_key, temp)
+            print("Downloading {}".format(file_key))
             err = False
         except Exception as e:
             print(e)
@@ -462,7 +463,7 @@ def process_s3_files(topic_id:int ,s3bucket: str, s3prefix: str, con=None):
 def get_upstream_tweets(tweet_file):
     data = pd.read_json(tweet_file, lines=True, orient='records', dtype=False)
     tweet_ids = data.loc[~data.in_reply_to_status_id.isna()]['in_reply_to_status_id_str'].drop_duplicates()
-
+    print("In reply tweets: {}".format(len(tweet_ids)))
     if len(tweet_ids)>0:
         tweets = get_tweets_by_id(tweet_ids, output='all')
         if len(tweets)>0:

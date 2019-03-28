@@ -29,6 +29,7 @@ def fix_none(SQL: str):
     # Replaces None and Null in SQL statements so they don't error out
     SQL = SQL.replace("None", "NULL")
     SQL = SQL.replace("'NULL'", "NULL")
+    SQL = SQL.replace("nan", "NULL")
     return SQL
 
 

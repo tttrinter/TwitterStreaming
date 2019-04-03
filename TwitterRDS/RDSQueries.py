@@ -611,36 +611,6 @@ def upsert_usernames(user_id, names, con=None):
     con.commit()
 
 
-def get_dehydrated_followers(minid=0, limit=10000, con=None):
-    """
-    Finds follower_ids from the user_followers table that do not have user records in the users table
-    :param minid: minimum twitter id - used to skip ahead in the list if necessary.
-    :param limit: int, limit of how many followers to pull
-    :param con: database connection
-    :return: list of twitter_ids needing user records
-    """
-    if con is None:
-        con = RDSconfig.get_connection()
-
-    SQL = """SELECT DISTINCT tf_follower_id, users.id 
-    FROM user_followers 
-    LEFT OUTER JOIN users ON tf_follower_id = users.id
-    WHERE users.id is NULL
-    AND tf_follower_id > {:d}
-    ORDER BY tf_follower_id
-    LIMIT {:d}""".format(minid, limit)
-
-    try:
-        id_df = pd.read_sql(SQL, con)
-    except Exception as e:
-        return e
-
-    if len(id_df) > 0:
-        return list(id_df['tf_follower_id'])
-    else:
-        return None
-
-
 def insert_stream_log(topic_id:int,
                       tweet_count: int,
                       api_acct: str,

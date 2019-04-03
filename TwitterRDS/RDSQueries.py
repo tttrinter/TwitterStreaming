@@ -876,6 +876,26 @@ def get_indicators(con=None):
         return
 
 
+def add_leader_indicator(indicator_id, user_id, conn):
+    """Adds a Twitter user to the list of indicators for the topic defined by indicator_id
+
+    Args:
+        indicator_id = int, defines the topic and is found in the indicators table
+        user_id = twitter user id for the user that is associated with the topic
+
+    Returns:
+        None
+
+    """
+    SQL = "INSERT INTO leader_indicators (li_user_id, li_indicator_id) VALUES ({}, {})".format(user_id, indicator_id)
+    cur = conn.cursor()
+
+    cur.execute(SQL)
+    conn.commit()
+
+    return ()
+
+
 def get_topics_toprocess(con=None):
     """ Gets all of the topics that have models defined and are turned on"""
     SQL = """SELECT DISTINCT tp_id, tp_name, tp_threshold, tp_child_topics

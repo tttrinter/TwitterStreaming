@@ -3,6 +3,8 @@
 
 *.log
 *.pyc
+*.config*
+*.zip
 
 # User-specific stuff:
 .idea/**/workspace.xml

@@ -840,7 +840,7 @@ def update_user_indicator_counts(indicator_id, con=None):
 
     # Run the INSERT query
     SQL = """INSERT INTO user_indicator_counts (ti_user_id, ti_count, ti_indicator_id)
-        SELECT tf_follower_id, count(tf_user_id), {}
+        SELECT DISTINCT tf_follower_id, count(tf_user_id), {}
         FROM user_followers
         INNER JOIN leader_indicators ON tf_user_id=li_user_id
         WHERE li_indicator_id={}
